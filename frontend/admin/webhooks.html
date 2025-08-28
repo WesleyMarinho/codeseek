@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhooks - DigiServer Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+<body class="h-full">
+    <!-- Container de notificações -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <nav class="flex-1 p-4">
+                <ul>
+                    <li class="mb-2"><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li class="mb-2"><a href="/admin/users" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-users mr-3"></i>Users</a></li>
+                    <li class="mb-2"><a href="/admin/products" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-boxes mr-3"></i>Products</a></li>
+                    <li class="mb-2"><a href="/admin/categories" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tags mr-3"></i>Categories</a></li>
+                    <li class="mb-2"><a href="/admin/subscriptions" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sync-alt mr-3"></i>Subscriptions</a></li>
+                    <li class="mb-2"><a href="/admin/licenses" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-key mr-3"></i>Licenses</a></li>
+                    <li class="mb-2"><a href="/admin/webhooks" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-bolt mr-3"></i>Webhooks</a></li>
+                    <li class="mb-2"><a href="/admin/settings" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-cog mr-3"></i>Settings</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 p-8">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Webhook Event Logs</h1>
+                    <p class="text-gray-600 mt-2">Monitor and manage webhook events from external providers</p>
+                </div>
+                <div class="flex space-x-4">
+                    <button id="refresh-stats-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+                    </button>
+                    <button id="clear-logs-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md">
+                        <i class="fas fa-trash mr-2"></i>Clear All Logs
+                    </button>
+                </div>
+            </header>
+
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-list-ul text-gray-400 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Events</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stats-total">0</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-400 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Processed</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stats-processed">0</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle text-red-400 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Failed</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stats-failed">0</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-clock text-yellow-400 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Last 24h</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stats-recent">0</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Filters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="filter-provider" class="block text-sm font-medium text-gray-700">Provider</label>
+                        <select id="filter-provider" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">All Providers</option>
+                            <option value="chargebee">Chargebee</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filter-status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="filter-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">All Status</option>
+                            <option value="processed">Processed</option>
+                            <option value="failed">Failed</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filter-event-type" class="block text-sm font-medium text-gray-700">Event Type</label>
+                        <input type="text" id="filter-event-type" placeholder="e.g., invoice.payment_succeeded" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex items-end">
+                        <button id="apply-filters-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Webhook Logs Table -->
+            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Webhook Events</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Type</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error</th>
+                                <th scope="col" class="relative px-6 py-3">
+                                    <span class="sr-only">Actions</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="webhooks-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Webhook logs will be loaded here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination-container" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <!-- Pagination will be loaded here dynamically -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Payload Modal -->
+    <div id="payload-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Webhook Payload</h3>
+                    <button data-action="hidePayloadModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <pre id="payload-content" class="bg-gray-100 p-4 rounded-md overflow-auto max-h-96 text-sm"></pre>
+                </div>
+                <div class="mt-5 sm:mt-6">
+                    <button data-action="hidePayloadModal" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Logs Confirmation Modal -->
+    <div id="clear-logs-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Clear All Webhook Logs</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">
+                                Are you sure you want to delete all webhook logs? This action cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button id="clear-all-logs-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Delete All
+                    </button>
+                    <button id="hide-clear-modal-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../public/js/core.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentFilters = {};
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWebhookLogs();
+            loadWebhookStats();
+            
+            // Event delegation for dynamic buttons
+            document.addEventListener('click', function(e) {
+                const action = e.target.getAttribute('data-action');
+                const webhookId = e.target.getAttribute('data-webhook-id');
+                const page = e.target.getAttribute('data-page');
+                
+                if (action === 'viewPayload' && webhookId) {
+                    viewPayload(parseInt(webhookId));
+                } else if (action === 'retryWebhook' && webhookId) {
+                    retryWebhook(parseInt(webhookId));
+                } else if (action === 'loadPage' && page) {
+                    loadWebhookLogs(parseInt(page));
+                }
+            });
+            
+            // Static button event listeners
+            const refreshStatsBtn = document.getElementById('refresh-stats-btn');
+            console.log('Refresh Stats Button found:', refreshStatsBtn);
+            if (refreshStatsBtn) {
+                refreshStatsBtn.addEventListener('click', function() {
+                    console.log('Refresh Stats button clicked');
+                    refreshAllData();
+                });
+            }
+            
+            const clearLogsBtn = document.getElementById('clear-logs-btn');
+            console.log('Clear Logs Button found:', clearLogsBtn);
+            if (clearLogsBtn) clearLogsBtn.addEventListener('click', showClearLogsModal);
+            
+            const applyFiltersBtn = document.getElementById('apply-filters-btn');
+            console.log('Apply Filters Button found:', applyFiltersBtn);
+            if (applyFiltersBtn) applyFiltersBtn.addEventListener('click', applyFilters);
+            
+            // Modal button listeners
+            const hidePayloadBtns = document.querySelectorAll('[data-action="hidePayloadModal"]');
+            hidePayloadBtns.forEach(btn => btn.addEventListener('click', hidePayloadModal));
+            
+            const clearAllLogsBtn = document.getElementById('clear-all-logs-btn');
+            if (clearAllLogsBtn) clearAllLogsBtn.addEventListener('click', clearAllLogs);
+            
+            const hideClearModalBtn = document.getElementById('hide-clear-modal-btn');
+            if (hideClearModalBtn) hideClearModalBtn.addEventListener('click', hideClearLogsModal);
+        });
+
+        // Refresh all data (stats + logs)
+        async function refreshAllData() {
+            console.log('Refreshing all data...');
+            showNotification('Refreshing data...', 'info');
+            
+            try {
+                // Refresh both stats and logs
+                await Promise.all([
+                    loadWebhookStats(),
+                    loadWebhookLogs(currentPage)
+                ]);
+                
+                showNotification('Data refreshed successfully!', 'success');
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showNotification('Error refreshing data: ' + error.message, 'error');
+            }
+        }
+
+        // Load webhook logs
+        async function loadWebhookLogs(page = 1) {
+            try {
+                console.log('Loading webhook logs, page:', page);
+                showLoading();
+                
+                const params = new URLSearchParams({
+                    page: page,
+                    limit: 20,
+                    ...currentFilters
+                });
+
+                console.log('Fetching:', `/api/admin/webhooks?${params}`);
+                const response = await fetch(`/api/admin/webhooks?${params}`);
+                console.log('Response status:', response.status);
+                
+                if (response.status === 401) {
+                    // Not authenticated, redirect to login
+                    window.location.href = '../login.html';
+                    return;
+                }
+                
+                if (response.status === 403) {
+                    showNotification('Access denied. Admin privileges required.', 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (data.success) {
+                    renderWebhookLogs(data.data);
+                    renderPagination(data.pagination);
+                    currentPage = page;
+                } else {
+                    showNotification('Error loading webhook logs: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error loading webhook logs:', error);
+                showNotification('Error loading webhook logs: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load webhook statistics
+        async function loadWebhookStats() {
+            try {
+                console.log('Loading webhook stats...');
+                const response = await fetch('/api/admin/webhooks/stats');
+                console.log('Stats response status:', response.status);
+                
+                if (response.status === 401) {
+                    window.location.href = '../login.html';
+                    return;
+                }
+                
+                if (response.status === 403) {
+                    showNotification('Access denied. Admin privileges required.', 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('Stats data:', data);
+
+                if (data.success) {
+                    document.getElementById('stats-total').textContent = data.data.total;
+                    document.getElementById('stats-recent').textContent = data.data.last24Hours;
+                    
+                    // Calculate processed and failed counts
+                    let processed = 0, failed = 0;
+                    data.data.byProviderAndStatus.forEach(stat => {
+                        if (stat.status === 'processed') processed += parseInt(stat.count);
+                        if (stat.status === 'failed') failed += parseInt(stat.count);
+                    });
+                    
+                    document.getElementById('stats-processed').textContent = processed;
+                    document.getElementById('stats-failed').textContent = failed;
+                    
+                    console.log('Stats updated successfully');
+                } else {
+                    console.error('Error in stats response:', data);
+                    showNotification('Error loading webhook stats: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error loading webhook stats:', error);
+                showNotification('Error loading webhook stats: ' + error.message, 'error');
+            }
+        }
+
+        // Render webhook logs in table
+        function renderWebhookLogs(webhooks) {
+            const tbody = document.getElementById('webhooks-table-body');
+            
+            if (webhooks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                            No webhook logs found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = webhooks.map(webhook => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${formatDate(webhook.createdAt)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProviderBadgeClass(webhook.provider)}">
+                            ${webhook.provider}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                        ${webhook.eventType}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(webhook.status)}">
+                            ${webhook.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        ${webhook.errorMessage || '-'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button data-action="viewPayload" data-webhook-id="${webhook.id}" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            View Payload
+                        </button>
+                        ${webhook.status === 'failed' ? `
+                            <button data-action="retryWebhook" data-webhook-id="${webhook.id}" class="text-yellow-600 hover:text-yellow-900">
+                                Retry
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Render pagination
+        function renderPagination(pagination) {
+            const container = document.getElementById('pagination-container');
+            
+            if (pagination.pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const { page, pages, total } = pagination;
+            
+            container.innerHTML = `
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <button ${page <= 1 ? 'disabled' : ''} 
+                            data-action="loadPage" data-page="${page - 1}"
+                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 ${page <= 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                        Previous
+                    </button>
+                    <button ${page >= pages ? 'disabled' : ''} 
+                            data-action="loadPage" data-page="${page + 1}"
+                            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 ${page >= pages ? 'opacity-50 cursor-not-allowed' : ''}">
+                        Next
+                    </button>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing page <span class="font-medium">${page}</span> of <span class="font-medium">${pages}</span>
+                            (<span class="font-medium">${total}</span> total results)
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            ${generatePaginationButtons(page, pages)}
+                        </nav>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Generate pagination buttons
+        function generatePaginationButtons(current, total) {
+            let buttons = [];
+            
+            // Previous button
+            buttons.push(`
+                <button ${current <= 1 ? 'disabled' : ''} 
+                        data-action="loadPage" data-page="${current - 1}"
+                        class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${current <= 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `);
+            
+            // Page numbers
+            const startPage = Math.max(1, current - 2);
+            const endPage = Math.min(total, current + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                buttons.push(`
+                    <button data-action="loadPage" data-page="${i}"
+                            class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                i === current 
+                                    ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600' 
+                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            }">
+                        ${i}
+                    </button>
+                `);
+            }
+            
+            // Next button
+            buttons.push(`
+                <button ${current >= total ? 'disabled' : ''} 
+                        data-action="loadPage" data-page="${current + 1}"
+                        class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${current >= total ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `);
+            
+            return buttons.join('');
+        }
+
+        // Apply filters
+        function applyFilters() {
+            currentFilters = {};
+            
+            const provider = document.getElementById('filter-provider').value;
+            const status = document.getElementById('filter-status').value;
+            const eventType = document.getElementById('filter-event-type').value;
+            
+            if (provider) currentFilters.provider = provider;
+            if (status) currentFilters.status = status;
+            if (eventType) currentFilters.eventType = eventType;
+            
+            loadWebhookLogs(1);
+        }
+
+        // View webhook payload
+        async function viewPayload(webhookId) {
+            try {
+                const response = await fetch(`/api/admin/webhooks`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const webhook = data.data.find(w => w.id === webhookId);
+                    if (webhook) {
+                        document.getElementById('payload-content').textContent = JSON.stringify(webhook.payload, null, 2);
+                        showPayloadModal();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading webhook payload:', error);
+                showNotification('Error loading webhook payload', 'error');
+            }
+        }
+
+        // Retry webhook
+        async function retryWebhook(webhookId) {
+            try {
+                showLoading();
+                
+                const response = await fetch(`/api/admin/webhooks/retry/${webhookId}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Webhook queued for reprocessing', 'success');
+                    loadWebhookLogs(currentPage);
+                } else {
+                    showNotification('Error retrying webhook: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error retrying webhook:', error);
+                showNotification('Error retrying webhook', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Clear all logs
+        async function clearAllLogs() {
+            try {
+                showLoading();
+                hideClearLogsModal();
+                
+                const response = await fetch('/api/admin/webhooks/clear', {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('All webhook logs cleared successfully', 'success');
+                    loadWebhookLogs(1);
+                    loadWebhookStats();
+                } else {
+                    showNotification('Error clearing logs: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error clearing logs:', error);
+                showNotification('Error clearing logs', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Modal functions
+        function showPayloadModal() {
+            document.getElementById('payload-modal').classList.remove('hidden');
+        }
+
+        function hidePayloadModal() {
+            document.getElementById('payload-modal').classList.add('hidden');
+        }
+
+        function showClearLogsModal() {
+            document.getElementById('clear-logs-modal').classList.remove('hidden');
+        }
+
+        function hideClearLogsModal() {
+            document.getElementById('clear-logs-modal').classList.add('hidden');
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'processed':
+                    return 'bg-green-100 text-green-800';
+                case 'failed':
+                    return 'bg-red-100 text-red-800';
+                case 'pending':
+                    return 'bg-yellow-100 text-yellow-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getProviderBadgeClass(provider) {
+            switch (provider) {
+                case 'chargebee':
+                    return 'bg-purple-100 text-purple-800';
+                case 'custom':
+                    return 'bg-blue-100 text-blue-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+    </script>
+
+    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/core.js"></script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-50 font-sans">
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex-col hidden sm:flex">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer</div>
+            <nav class="flex-1 p-4">
+                <ul class="space-y-2">
+                    <li><a href="/dashboard" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/dashboard/products" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-box mr-3"></i>My Products</a></li>
+                    <li><a href="/dashboard/licenses" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-key mr-3"></i>My Licenses</a></li>
+                    <li><a href="/dashboard/billing" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-file-invoice-dollar mr-3"></i>Billing</a></li>
+                    <li><a href="/dashboard/profile" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-user-circle mr-3"></i>Profile</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col">
+            <header class="bg-white shadow-sm border-b border-gray-200 p-4 flex justify-between items-center">
+                <div class="flex items-center">
+                    <button class="text-gray-600 mr-4 sm:hidden" id="menu-button">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-gray-800">Billing & Subscriptions</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-greeting" class="font-semibold text-gray-700">Hello!</span>
+                    <img src="https://picsum.photos/seed/avatar/40/40" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-gray-300">
+                </div>
+            </header>
+
+            <div class="p-6 flex-1 overflow-y-auto">
+                <!-- My Subscriptions -->
+                <section class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">My Subscriptions</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Plan</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Status</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Next Billing</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subscriptions-table-body" class="text-gray-700">
+                                <!-- Rows will be inserted here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <a href="#" class="inline-flex items-center mt-6 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-credit-card mr-2"></i>Manage in Chargebee
+                    </a>
+                </section>
+
+                <!-- Invoice History -->
+                <section class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Invoice History</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Date</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Description</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Amount</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoices-table-body" class="text-gray-700">
+                                <!-- Rows will be inserted here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/public/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Busca o nome do usuário para o cabeçalho
+            try {
+                const response = await fetch('/api/user/profile', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('user-greeting').textContent = `Hello, ${data.user.username}!`;
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile", error);
+            }
+
+            // Função principal para carregar as licenças
+            await loadUserLicenses();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuButton = document.getElementById('menu-button');
+            const sidebar = document.querySelector('aside');
+            menuButton.addEventListener('click', () => {
+                sidebar.classList.toggle('hidden');
+            });
+
+            const subscriptionsTableBody = document.getElementById('subscriptions-table-body');
+            const invoicesTableBody = document.getElementById('invoices-table-body');
+
+            const showLoadingState = (tbody, colSpan) => {
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-4">Loading...</td></tr>`;
+            };
+
+            const showEmptyState = (tbody, colSpan, message) => {
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-4">${message}</td></tr>`;
+            };
+
+            const formatDate = (dateString) => {
+                if (!dateString) return 'N/A';
+                const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+                return new Date(dateString).toLocaleDateString(undefined, options);
+            };
+
+            const formatCurrency = (amount) => {
+                return `$${parseFloat(amount).toFixed(2)}`;
+            };
+
+            const populateSubscriptionsTable = (subscriptions) => {
+                if (subscriptions.length === 0) {
+                    showEmptyState(subscriptionsTableBody, 4, 'No active subscriptions found.');
+                    return;
+                }
+
+                subscriptionsTableBody.innerHTML = ''; // Clear loading state
+                subscriptions.forEach(sub => {
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-3 px-4 font-medium capitalize">${sub.plan}</td>
+                            <td class="py-3 px-4"><span class="bg-green-100 text-green-700 py-1 px-3 rounded-full text-xs font-semibold"><i class="fas fa-check-circle mr-1"></i>${sub.status}</span></td>
+                            <td class="py-3 px-4">${formatDate(sub.endDate)}</td>
+                            <td class="py-3 px-4 font-mono">${formatCurrency(sub.price)}</td>
+                        </tr>
+                    `;
+                    subscriptionsTableBody.insertAdjacentHTML('beforeend', row);
+                });
+            };
+
+            const populateInvoicesTable = (invoices) => {
+                if (invoices.length === 0) {
+                    showEmptyState(invoicesTableBody, 4, 'No invoice history found.');
+                    return;
+                }
+
+                invoicesTableBody.innerHTML = ''; // Clear loading state
+                invoices.forEach(inv => {
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-3 px-4">${formatDate(inv.issueDate)}</td>
+                            <td class="py-3 px-4 font-medium">Invoice ${inv.invoiceNumber}</td>
+                            <td class="py-3 px-4 font-mono">${formatCurrency(inv.amount)}</td>
+                            <td class="py-3 px-4">
+                                <a href="${inv.pdfUrl || '#'}" class="text-blue-600 hover:underline flex items-center ${!inv.pdfUrl ? 'opacity-50 cursor-not-allowed' : ''}" ${!inv.pdfUrl ? 'onclick="event.preventDefault()"' : 'target="_blank"'}>
+                                    <i class="fas fa-download mr-2"></i>Download PDF
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                    invoicesTableBody.insertAdjacentHTML('beforeend', row);
+                });
+            };
+
+            const loadBillingData = async () => {
+                showLoadingState(subscriptionsTableBody, 4);
+                showLoadingState(invoicesTableBody, 4);
+
+                try {
+                    const response = await fetch('/api/user/billing');
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                           window.location.href = '/login.html';
+                        }
+                        throw new Error('Failed to fetch billing data');
+                    }
+                    const result = await response.json();
+
+                    if (result.success) {
+                        populateSubscriptionsTable(result.data.subscriptions);
+                        populateInvoicesTable(result.data.invoices);
+                    } else {
+                        throw new Error(result.message || 'An unknown error occurred');
+                    }
+                } catch (error) {
+                    console.error('Error loading billing data:', error);
+                    showEmptyState(subscriptionsTableBody, 4, 'Error loading subscriptions.');
+                    showEmptyState(invoicesTableBody, 4, 'Error loading invoices.');
+                }
+            };
+
+            loadBillingData();
+        });
+    </script>
+</body>
+</html>
+

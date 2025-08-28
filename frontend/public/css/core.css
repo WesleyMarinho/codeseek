@@ -1,0 +1,372 @@
+/* frontend/public/css/core.css */
+
+html,
+body {
+    overflow-x: hidden;
+    width: 100%;
+    /* height: 100%; */
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(10px);
+}
+
+.cart-count {
+    font-size: 11px;
+}
+
+/* ==================== LAYOUT DO DASHBOARD ==================== */
+/* Sidebar fixo com scroll independente */
+.dashboard-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.dashboard-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 16rem;
+    /* w-64 = 256px = 16rem */
+    height: 100vh;
+    background-color: #1f2937;
+    /* bg-gray-800 */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    z-index: 40;
+    overflow: hidden;
+}
+
+.dashboard-sidebar-header {
+    padding: 1.25rem;
+    background-color: #111827;
+    /* bg-gray-900 */
+    font-size: 1.5rem;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.dashboard-sidebar-nav {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.dashboard-sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dashboard-sidebar-nav::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dashboard-sidebar-nav::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 3px;
+}
+
+.dashboard-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.dashboard-sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid #374151;
+    flex-shrink: 0;
+}
+
+.dashboard-main {
+    margin-left: 16rem;
+    /* Same as sidebar width */
+    width: calc(100% - 16rem);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.dashboard-header {
+    background-color: white;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1rem 1.5rem;
+    flex-shrink: 0;
+    z-index: 30;
+}
+
+.dashboard-content {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #f9fafb;
+}
+
+.dashboard-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dashboard-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.dashboard-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.dashboard-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Responsivo para mobile */
+@media (max-width: 640px) {
+    .dashboard-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .dashboard-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .dashboard-main {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .mobile-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 35;
+        display: none;
+    }
+
+    .mobile-overlay.active {
+        display: block;
+    }
+}
+
+/* frontend/public/css/core.css (Versão Completa e Atualizada) */
+
+/* ==================== LAYOUT GERAL E MODAIS ==================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#notification-container {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ==================== UPLOAD DE ARQUIVOS (NOVA INTERFACE) ==================== */
+
+.dropzone-container .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #2563eb;
+    color: white;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dropzone-container .upload-btn:hover {
+    background-color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.dropzone-container .upload-btn:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* O elemento Dropzone em si fica escondido, o botão o aciona */
+.dropzone.hidden {
+    display: none;
+}
+
+/* Grade para previews de mídia */
+.media-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+/* Item individual da grade de mídia */
+.media-preview-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background: #f3f4f6;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.media-preview-item:hover {
+    border-color: #3b82f6;
+}
+
+.media-preview-item.media-preview-featured {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+}
+
+.media-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Overlay com ações (destacar, remover) */
+.media-preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.media-preview-item:hover .media-preview-overlay {
+    background: rgba(0, 0, 0, 0.6);
+    opacity: 1;
+}
+
+.media-preview-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.media-preview-actions button {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.set-featured-btn {
+    background: #3b82f6;
+}
+
+.set-featured-btn:hover {
+    background: #2563eb;
+}
+
+.remove-media-btn {
+    background: #ef4444;
+}
+
+.remove-media-btn:hover {
+    background: #dc2626;
+}
+
+/* Badge de "Featured" */
+.media-preview-featured-badge {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+    background: #10b981;
+    color: white;
+    font-size: 12px;
+    line-height: 25px;
+    text-align: center;
+    height: 25px;
+    width: 25px;
+    font-weight: 600;
+    border-radius: 100%;
+    z-index: 10;
+}
+
+/* Preview de arquivo ZIP (lista) */
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+}
+
+.file-preview-item .file-icon i {
+    font-size: 1.5rem;
+    color: #3b82f6;
+}
+
+.file-preview-item .file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-preview-item .file-name {
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-preview-item .file-actions button {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+.file-preview-item .file-actions button:hover {
+    color: #ef4444;
+}

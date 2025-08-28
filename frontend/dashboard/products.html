@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Products - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+
+<body class="bg-gray-50 font-sans">
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="dashboard-sidebar">
+            <div class="dashboard-sidebar-header">DigiServer</div>
+            <nav class="dashboard-sidebar-nav">
+                <ul class="space-y-2">
+                    <li><a href="/dashboard" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/dashboard/products" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-box mr-3"></i>My Products</a></li>
+                    <li><a href="/dashboard/licenses" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-key mr-3"></i>My Licenses</a></li>
+                    <li><a href="/dashboard/billing" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-file-invoice-dollar mr-3"></i>Billing</a></li>
+                    <li><a href="/dashboard/profile" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-user-circle mr-3"></i>Profile</a></li>
+                </ul>
+            </nav>
+            <div class="dashboard-sidebar-footer">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <button class="text-gray-600 mr-4 sm:hidden" id="menu-button">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h1 class="text-2xl font-bold text-gray-800">My Products</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="font-semibold text-gray-700" id="user-greeting">Hello!</span>
+                        <img src="https://picsum.photos/seed/avatar/40/40" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-gray-300">
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Your Purchased Products</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-50"> 
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Product</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Purchase Date</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <!-- *** CORREÇÃO: TBODY está vazio e tem um ID para ser preenchido pelo JS *** -->
+                            <tbody id="products-table-body" class="text-gray-700">
+                                <!-- As linhas da tabela serão inseridas aqui pelo JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/core.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Busca o nome do usuário para o cabeçalho
+            try {
+                const response = await fetch('/api/user/profile', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('user-greeting').textContent = `Hello, ${data.user.username}!`;
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile", error);
+            }
+
+            // Função principal para carregar os produtos
+            await loadUserProducts();
+        });
+
+        async function loadUserProducts() {
+            const tbody = document.getElementById('products-table-body');
+            tbody.innerHTML = `<tr><td colspan="3" class="py-4 px-4 text-center text-gray-500">Loading products...</td></tr>`;
+
+            try {
+                const response = await fetch('/api/user/products', { credentials: 'include' });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                tbody.innerHTML = ''; // Limpa o "Loading..."
+
+                if (data.products && data.products.length > 0) {
+                    data.products.forEach(product => {
+                        const purchaseDate = new Date(product.purchaseDate).toLocaleDateString();
+
+                        let actionsHtml = '';
+                        // A lógica agora é baseada no 'type' enviado pela API
+                        if (product.type === 'subscription') {
+                            actionsHtml = `
+                            <div class="flex items-center space-x-4">
+                                <a href="/dashboard/included-products" class="text-blue-600 hover:underline flex items-center text-sm">
+                                    <i class="fas fa-cubes mr-2"></i>View Included Products
+                                </a>
+                                    <a href="/dashboard/manage-license/${product.licenseId}" class="text-blue-600 hover:underline inline-flex items-center text-sm">
+                                        <i class="fas fa-key mr-2"></i>View License
+                                    </a>
+                            </div>`;
+                        } else {
+                            actionsHtml = `
+                                <div class="flex items-center space-x-4">
+                                    <a href="/api/products/${product.productId}/download" class="text-blue-600 hover:underline inline-flex items-center text-sm">
+                                        <i class="fas fa-download mr-2"></i>Download
+                                    </a>
+                                    <a href="/dashboard/manage-license/${product.licenseId}" class="text-blue-600 hover:underline inline-flex items-center text-sm">
+                                        <i class="fas fa-key mr-2"></i>View License
+                                    </a>
+                                </div>`;
+                        }
+
+                        const row = `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-3 px-4 font-medium">${product.productName}</td>
+                                <td class="py-3 px-4">${purchaseDate}</td>
+                                <td class="py-3 px-4">${actionsHtml}</td>
+                            </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3" class="py-4 px-4 text-center text-gray-500">You haven't purchased any products yet.</td></tr>`;
+                }
+            } catch (error) {
+                console.error('Error loading user products:', error);
+                tbody.innerHTML = `<tr><td colspan="3" class="py-4 px-4 text-center text-red-500">Failed to load products. Please try again later.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

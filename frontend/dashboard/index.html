@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - DigiServer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+
+<body class="bg-gray-50 font-sans">
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="dashboard-sidebar">
+            <div class="dashboard-sidebar-header">DigiServer</div>
+            <nav class="dashboard-sidebar-nav">
+                <ul class="space-y-2">
+                    <li><a href="/dashboard" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/dashboard/products" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-box mr-3"></i>My Products</a></li>
+                    <li><a href="/dashboard/licenses" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-key mr-3"></i>My Licenses</a></li>
+                    <li><a href="/dashboard/billing" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-file-invoice-dollar mr-3"></i>Billing</a></li>
+                    <li><a href="/dashboard/profile" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-user-circle mr-3"></i>Profile</a></li>
+                </ul>
+            </nav>
+            <div class="dashboard-sidebar-footer">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <button class="text-gray-600 mr-4 sm:hidden" id="menu-button">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="font-semibold text-gray-700" id="user-greeting">Hello!</span>
+                        <img src="https://picsum.photos/seed/avatar/40/40" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-gray-300">
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <!-- KPIs -->
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
+                        <div class="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mr-6 flex-shrink-0">
+                            <i class="fas fa-check-circle text-3xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 font-semibold">Active Subscriptions</h4>
+                            <p class="text-3xl font-bold mt-1" id="active-subscriptions">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
+                        <div class="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mr-6 flex-shrink-0">
+                            <i class="fas fa-key text-3xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 font-semibold">Active Licenses</h4>
+                            <p class="text-3xl font-bold mt-1" id="active-licenses">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
+                        <div class="bg-yellow-100 text-yellow-600 w-16 h-16 rounded-full flex items-center justify-center mr-6 flex-shrink-0">
+                            <i class="fas fa-file-invoice-dollar text-3xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 font-semibold">Next Invoice</h4>
+                            <p class="text-2xl font-bold mt-1" id="next-invoice-amount">-</p>
+                            <span class="text-sm text-gray-500" id="next-invoice-date">-</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Recent Activity -->
+                <section class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Recent Activity</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Date</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Product</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-gray-700" id="recent-activity">
+                                <!-- Dados carregados dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/public/js/auth.js"></script>
+    <script>
+        // Função para carregar dados do dashboard
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/user/dashboard/data', { credentials: 'include' });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Usuário não autenticado, redirecionar para login
+                        window.location.href = '/login';
+                        return;
+                    } else if (response.status === 403) {
+                        throw new Error('Access forbidden');
+                    } else if (response.status === 404) {
+                        throw new Error('Dashboard data not found');
+                    } else if (response.status === 500) {
+                        throw new Error('Internal server error');
+                    } else {
+                        throw new Error('Error loading dashboard data');
+                    }
+                }
+
+                const response_data = await response.json();
+                const data = response_data.data; // Extrair os dados corretos
+                
+                // Atualizar informações do usuário
+                if (data.user && data.user.username) {
+                    document.getElementById('user-greeting').textContent = `Hello, ${data.user.username}!`;
+                }
+                
+                // Atualizar estatísticas
+                document.getElementById('active-licenses').textContent = data.stats.activeLicenses || 0;
+                document.getElementById('active-subscriptions').textContent = data.stats.activeSubscriptions || 0;
+                
+                // Atualizar próxima fatura
+                if (data.stats.nextInvoice) {
+                    document.getElementById('next-invoice-amount').textContent = `$${data.stats.nextInvoice.amount}`;
+                    const invoiceDate = new Date(data.stats.nextInvoice.date);
+                    document.getElementById('next-invoice-date').textContent = `on ${invoiceDate.toLocaleDateString()}`;
+                } else {
+                    document.getElementById('next-invoice-amount').textContent = 'No invoices';
+                    document.getElementById('next-invoice-date').textContent = '';
+                }
+                
+                // Atualizar atividades recentes
+                const activityContainer = document.getElementById('recent-activity');
+                activityContainer.innerHTML = '';
+                
+                if (!data.recentActivity || data.recentActivity.length === 0) {
+                    activityContainer.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="py-6 px-4 text-center text-gray-500">
+                                No recent activity found
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    data.recentActivity.forEach(activity => {
+                        const activityDate = new Date(activity.date);
+                        const row = `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-3 px-4">${activityDate.toLocaleDateString()}</td>
+                                <td class="py-3 px-4 font-medium">${activity.product}</td>
+                                <td class="py-3 px-4">${activity.activity}</td>
+                            </tr>
+                        `;
+                        activityContainer.innerHTML += row;
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados do dashboard:', error);
+                
+                // Mostrar mensagem de erro
+                const activityContainer = document.getElementById('recent-activity');
+                activityContainer.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="py-6 px-4 text-center text-red-500">
+                            Error loading data. Please try again.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Mobile menu functionality
+        const menuButton = document.getElementById('menu-button');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+
+        menuButton?.addEventListener('click', () => {
+            sidebar.classList.toggle('mobile-open');
+            mobileOverlay.classList.toggle('active');
+        });
+
+        mobileOverlay?.addEventListener('click', () => {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+        });
+
+        // Carregar dados quando a página carregar
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+        </script>
+</body>
+</html>
+

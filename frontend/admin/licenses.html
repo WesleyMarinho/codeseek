@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Licenses - DigiServer Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 1. INCLUIR O NOVO CSS GLOBAL -->
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+<body class="h-full">
+    <!-- 2. ADICIONAR O CONTAINER DE NOTIFICAÇÕES -->
+    <div id="notification-container"></div>
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <nav class="flex-1 p-4">
+                <ul>
+                    <li class="mb-2"><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li class="mb-2"><a href="/admin/users" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-users mr-3"></i>Users</a></li>
+                    <li class="mb-2"><a href="/admin/products" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-boxes mr-3"></i>Products</a></li>
+                    <li class="mb-2"><a href="/admin/categories" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tags mr-3"></i>Categories</a></li>
+                    <li class="mb-2"><a href="/admin/subscriptions" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sync-alt mr-3"></i>Subscriptions</a></li>
+                    <li class="mb-2"><a href="/admin/licenses" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-key mr-3"></i>Licenses</a></li>
+                    <li class="mb-2"><a href="/admin/webhooks" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-bolt mr-3"></i>Webhooks</a></li>
+                    <li class="mb-2"><a href="/admin/settings" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-cog mr-3"></i>Settings</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Manage Licenses</h1>
+                    <button id="add-license-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Generate New License
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 p-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">License Key</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Activations</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Expiry Date</th>
+                                    <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="licenses-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Dados dinâmicos serão inseridos aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/public/js/auth.js"></script>
+    <!-- 3. INCLUIR O NOVO JS GLOBAL -->
+    <script src="/public/js/core.js"></script>
+    <script>
+        let formOptions = { users: [], products: [] };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLicenses();
+            loadFormOptions();
+
+            document.getElementById('add-license-btn').addEventListener('click', () => {
+                showFormModal({
+                    title: 'Generate New License',
+                    fields: [
+                        { 
+                            name: 'userId', 
+                            label: 'User', 
+                            type: 'select', 
+                            required: true,
+                            options: formOptions.users.map(user => ({ 
+                                value: user.id, 
+                                label: `${user.username} (${user.email})` 
+                            }))
+                        },
+                        { 
+                            name: 'productId', 
+                            label: 'Product', 
+                            type: 'select', 
+                            required: true,
+                            options: formOptions.products.map(product => ({ 
+                                value: product.id, 
+                                label: product.name 
+                            }))
+                        },
+                        { name: 'expiresOn', label: 'Expiry Date', type: 'date', required: false },
+                        { name: 'maxActivations', label: 'Max Activations', type: 'number', required: false, value: '1' }
+                    ],
+                    onSubmit: async (data) => {
+                        try {
+                            // Converter dados apropriadamente
+                            if (data.maxActivations) {
+                                data.maxActivations = parseInt(data.maxActivations);
+                            }
+
+                            const response = await fetch('/api/admin/licenses', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify(data)
+                            });
+                            const result = await response.json();
+                            if (!response.ok) throw new Error(result.message || 'Failed to create license.');
+                            showNotification('License created successfully!', 'success');
+                            loadLicenses();
+                        } catch (error) {
+                            showNotification(`Error: ${error.message}`, 'error');
+                        }
+                    }
+                });
+            });
+
+            document.getElementById('licenses-table-body').addEventListener('click', async (event) => {
+                const editBtn = event.target.closest('.edit-btn');
+                if (editBtn) {
+                    const { id, productId, userId, expiresOn, maxActivations } = editBtn.dataset;
+                    
+                    const formattedExpiresOn = expiresOn && expiresOn !== 'null' ? new Date(expiresOn).toISOString().split('T')[0] : '';
+
+                    showFormModal({
+                        title: `Edit License`,
+                        initialData: { 
+                            id, 
+                            productId: parseInt(productId, 10), // Garantir que seja número
+                            userId: parseInt(userId, 10),       // Garantir que seja número
+                            expiresOn: formattedExpiresOn, 
+                            maxActivations 
+                        },
+                        fields: [
+                            { 
+                                name: 'userId', 
+                                label: 'User', 
+                                type: 'select', 
+                                required: true,
+                                options: formOptions.users.map(user => ({ 
+                                    value: user.id, 
+                                    label: `${user.username} (${user.email})` 
+                                }))
+                            },
+                            { 
+                                name: 'productId', 
+                                label: 'Product', 
+                                type: 'select', 
+                                required: true,
+                                options: formOptions.products.map(product => ({ 
+                                    value: product.id, 
+                                    label: product.name 
+                                }))
+                            },
+                            { name: 'expiresOn', label: 'Expiry Date', type: 'date', required: false },
+                            { name: 'maxActivations', label: 'Max Activations', type: 'number', required: false }
+                        ],
+                        onSubmit: async (data) => {
+                            try {
+                                // Converter dados apropriadamente
+                                if (data.maxActivations) {
+                                    data.maxActivations = parseInt(data.maxActivations);
+                                }
+
+                                const response = await fetch(`/api/admin/licenses/${id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify(data)
+                                });
+                                const result = await response.json();
+                                if (!response.ok) throw new Error(result.message || 'Failed to update license.');
+                                showNotification('License updated successfully!', 'success');
+                                loadLicenses();
+                            } catch (error) {
+                                showNotification(`Error: ${error.message}`, 'error');
+                            }
+                        }
+                    });
+                }
+
+                const suspendBtn = event.target.closest('.suspend-btn');
+                if (suspendBtn) {
+                    const { licenseId, licenseStatus } = suspendBtn.dataset;
+                    const newStatus = licenseStatus === 'active' ? 'revoked' : 'active';
+                    const action = newStatus === 'revoked' ? 'suspend' : 'reactivate';
+                    showConfirmationModal({
+                        title: `${action.charAt(0).toUpperCase() + action.slice(1)} License`,
+                        message: `Are you sure you want to ${action} this license?`,
+                        onConfirm: async () => {
+                            try {
+                                const response = await fetch(`/api/admin/licenses/${licenseId}/status`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ status: newStatus })
+                                });
+                                const result = await response.json();
+                                if (!response.ok) throw new Error(result.message || 'Failed to update license status.');
+                                showNotification(`License ${action}d successfully!`, 'success');
+                                loadLicenses();
+                            } catch (error) {
+                                showNotification(`Error: ${error.message}`, 'error');
+                            }
+                        }
+                    });
+                }
+
+                const resetBtn = event.target.closest('.reset-btn');
+                if (resetBtn) {
+                    const { licenseId } = resetBtn.dataset;
+                    showConfirmationModal({
+                        title: 'Reset License',
+                        message: 'Are you sure you want to reset this license? This will remove all activations.',
+                        onConfirm: async () => {
+                            try {
+                                const response = await fetch(`/api/admin/licenses/${licenseId}/reset`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include'
+                                });
+                                const result = await response.json();
+                                if (!response.ok) throw new Error(result.message || 'Failed to reset license.');
+                                showNotification('License reset successfully!', 'success');
+                                loadLicenses();
+                            } catch (error) {
+                                showNotification(`Error: ${error.message}`, 'error');
+                            }
+                        }
+                    });
+                }
+
+                const deleteBtn = event.target.closest('.delete-btn');
+                if (deleteBtn) {
+                    const { licenseId, licenseKey } = deleteBtn.dataset;
+                    showConfirmationModal({
+                        title: 'Delete License',
+                        message: `Are you sure you want to permanently delete license "${licenseKey}"? This action cannot be undone.`,
+                        onConfirm: async () => {
+                            try {
+                                const response = await fetch(`/api/admin/licenses/${licenseId}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include'
+                                });
+                                const result = await response.json();
+                                if (!response.ok) throw new Error(result.message || 'Failed to delete license.');
+                                showNotification('License deleted successfully!', 'success');
+                                loadLicenses();
+                            } catch (error) {
+                                showNotification(`Error: ${error.message}`, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        async function loadFormOptions() {
+            try {
+                const response = await fetch('/api/admin/licenses/options', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch form options');
+                const data = await response.json();
+                if (data.success) {
+                    formOptions = data;
+                } else {
+                    throw new Error(data.message || 'Failed to load form options');
+                }
+            } catch (error) {
+                console.error('Error loading form options:', error);
+                showNotification('Error loading form options', 'error');
+            }
+        }
+
+        function renderLicenseRow(license) {
+            const statusConfig = {
+                'active': { color: 'bg-green-100 text-green-800', icon: 'fa-check-circle', text: 'Active' },
+                'revoked': { color: 'bg-red-100 text-red-800', icon: 'fa-ban', text: 'Suspended' },
+                'expired': { color: 'bg-gray-100 text-gray-800', icon: 'fa-clock', text: 'Expired' },
+                'pending': { color: 'bg-yellow-100 text-yellow-800', icon: 'fa-hourglass-half', text: 'Pending' }
+            };
+
+            const status = statusConfig[license.status] || statusConfig['pending'];
+            const isActive = license.status === 'active';
+            const isSuspended = license.status === 'revoked';
+
+            const suspendButtonText = isSuspended ? 'Reactivate' : 'Suspend';
+            const suspendButtonIcon = isSuspended ? 'fa-play-circle' : 'fa-ban';
+            const suspendButtonColor = isSuspended ? 'text-green-600 hover:text-green-800' : 'text-red-600 hover:text-red-800';
+
+            const expiryDate = license.expiresOn ? new Date(license.expiresOn).toLocaleDateString() : 'No expiry';
+            const activationsText = `${license.activationCount}/${license.maxActivations}`;
+
+            const editButton = `
+                <button 
+                    class="edit-btn inline-flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition duration-150"
+                    data-id="${license.id}" 
+                    data-product-id="${license.productId}" 
+                    data-user-id="${license.userId}" 
+                    data-expires-on="${license.expiresOn || ''}" 
+                    data-max-activations="${license.maxActivations}">
+                    <i class="fas fa-edit mr-1"></i>Edit
+                </button>`;
+
+            const suspendButton = `
+                <button 
+                    class="suspend-btn inline-flex items-center px-3 py-1 text-sm ${suspendButtonColor} hover:bg-gray-50 rounded-md transition duration-150"
+                    data-license-id="${license.id}" 
+                    data-license-status="${license.status}">
+                    <i class="fas ${suspendButtonIcon} mr-1"></i>${suspendButtonText}
+                </button>`;
+
+            const resetButton = `
+                <button 
+                    class="reset-btn inline-flex items-center px-3 py-1 text-sm text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded-md transition duration-150"
+                    data-license-id="${license.id}">
+                    <i class="fas fa-redo mr-1"></i>Reset
+                </button>`;
+
+            const deleteButton = `
+                <button 
+                    class="delete-btn inline-flex items-center px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition duration-150"
+                    data-license-id="${license.id}" 
+                    data-license-key="${escapeHTML(license.key)}">
+                    <i class="fas fa-trash mr-1"></i>Delete
+                </button>`;
+
+            return `
+                <tr class="hover:bg-gray-50 transition duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-mono text-gray-900">${license.key}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <i class="fas fa-user text-blue-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">${license.user?.email || 'N/A'}</div>
+                                <div class="text-sm text-gray-500">${license.user?.username || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${license.product?.name || 'N/A'}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status.color}">
+                            <i class="fas ${status.icon} mr-1"></i>${status.text}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${activationsText}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${expiryDate}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end space-x-2">
+                            ${editButton}
+                            ${suspendButton}
+                            ${resetButton}
+                            ${deleteButton}
+                        </div>
+                    </td>
+                </tr>`;
+        }
+
+        async function loadLicenses() {
+            const tbody = document.getElementById('licenses-table-body');
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-400">Loading...</td></tr>`;
+            try {
+                const response = await fetch('/api/admin/licenses', { credentials: 'include' });
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) window.location.href = '/login.html';
+                    throw new Error('Failed to fetch licenses');
+                }
+                const data = await response.json();
+                const licenses = data.licenses;
+                
+                tbody.innerHTML = '';
+                if (licenses.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-400">No licenses found.</td></tr>`;
+                    return;
+                }
+                licenses.forEach(license => {
+                    tbody.insertAdjacentHTML('beforeend', renderLicenseRow(license));
+                });
+            } catch (error) {
+                console.error('Error loading licenses:', error);
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-red-500">Error loading licenses.</td></tr>`;
+            }
+        }
+        
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+        }
+    </script>
+</body>
+</html>

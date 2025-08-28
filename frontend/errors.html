@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Error - DigiServer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full text-center">
+            <div class="mb-8">
+                <i class="fas fa-exclamation-triangle text-6xl text-yellow-500 mb-4"></i>
+                <!-- IDs para serem preenchidos pelo JavaScript -->
+                <h1 id="error-code" class="text-4xl font-bold text-gray-800 mb-2">Error</h1>
+                <p id="error-title" class="text-xl text-gray-600 mb-4">An unexpected error occurred</p>
+                <p id="error-message" class="text-gray-500 mb-8">Please try again.</p>
+            </div>
+            <div class="space-y-4">
+                <a href="/" class="block w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-200">
+                    <i class="fas fa-home mr-2"></i>Go Home
+                </a>
+                <a href="/dashboard" class="block w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition duration-200">
+                    <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code') || 'Error';
+            const message = params.get('message') || "An unknown error has occurred.";
+
+            const errorTitles = {
+                '403': 'Access Forbidden',
+                '404': 'Page Not Found',
+                '500': 'Internal Server Error'
+            };
+
+            const title = errorTitles[code] || 'Error';
+            
+            // Atualiza o conteúdo da página com os dados da URL
+            document.title = `${code} - ${title} - DigiServer`;
+            document.getElementById('error-code').textContent = code;
+            document.getElementById('error-title').textContent = title;
+            document.getElementById('error-message').textContent = message;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add User - DigiServer Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar (com Users ativo) -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <nav class="flex-1 p-4">
+                <ul class="space-y-2">
+                    <li><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/admin/users" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-users mr-3"></i>Users</a></li>
+                    <li class="mb-2"><a href="products.html" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-boxes mr-3"></i>Products</a></li>
+                    <li class="mb-2"><a href="categories.html" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tags mr-3"></i>Categories</a></li>
+                    <li class="mb-2"><a href="subscriptions.html" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sync-alt mr-3"></i>Subscriptions</a></li>
+                    <li class="mb-2"><a href="licenses.html" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-key mr-3"></i>Licenses</a></li>
+                    <li class="mb-2"><a href="webhooks.html" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-bolt mr-3"></i>Webhooks</a></li>
+                    <li class="mb-2"><a href="settings.html" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-cog mr-3"></i>Settings</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col bg-gray-50">
+            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Add New User</h1>
+                    <a href="/admin/users" class="inline-flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition duration-150"><i class="fas fa-arrow-left mr-2"></i>Back to Users</a>
+                </div>
+            </header>
+
+            <div class="flex-1 p-6">
+                <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-2xl mx-auto">
+                    <form id="add-user-form">
+                        <div id="form-message" class="hidden mb-4 p-3 text-sm rounded-lg" role="alert"></div>
+                        <div class="mb-6">
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <input type="text" id="username" name="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                            <select id="role" name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end mt-8">
+                            <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 flex items-center">
+                                <i class="fas fa-plus mr-2"></i>Add User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/public/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('add-user-form');
+            const messageDiv = document.getElementById('form-message');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+
+                try {
+                    const response = await fetch('/api/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.message || 'An unknown error occurred.');
+                    }
+                    
+                    messageDiv.className = 'mb-4 p-3 text-sm rounded-lg bg-green-100 text-green-700';
+                    messageDiv.textContent = `${result.message} Redirecting to user list...`;
+
+                    // Redireciona para a lista de usuários após 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '/admin/users';
+                    }, 2000);
+
+                } catch (error) {
+                    messageDiv.className = 'mb-4 p-3 text-sm rounded-lg bg-red-100 text-red-700';
+                    messageDiv.textContent = error.message;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

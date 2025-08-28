@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Product - DigiServer Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="h-full">
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <nav class="flex-1 p-4">
+                <ul class="space-y-2">
+                    <li><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/admin/users" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-users mr-3"></i>Users</a></li>
+                    <li><a href="/admin/products"
+                            class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i
+                                class="fas fa-boxes mr-3"></i>Products</a></li>
+                    <li><a href="/admin/categories" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-tags mr-3"></i>Categories</a></li>
+                    <li><a href="/admin/subscriptions" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-sync-alt mr-3"></i>Subscriptions</a></li>
+                    <li><a href="/admin/licenses" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-key mr-3"></i>Licenses</a></li>
+                    <li><a href="/admin/webhooks" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-bolt mr-3"></i>Webhooks</a></li>
+                    <li><a href="/admin/settings" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-cog mr-3"></i>Settings</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                        class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 flex flex-col bg-gray-50">
+            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                <h1 id="page-header" class="text-2xl font-bold text-gray-900">Edit Product</h1>
+            </header>
+
+            <div class="flex-1 p-6">
+                <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+                    <form id="edit-product-form">
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- Product Name -->
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                                <input type="text" name="name" id="name" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+
+                            <!-- Description -->
+                            <div>
+                                <label for="description"
+                                    class="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea name="description" id="description" rows="3"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                            </div>
+
+                            <!-- Price -->
+                            <div>
+                                <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 sm:text-sm">$</span>
+                                    </div>
+                                    <input type="number" name="price" id="price" required step="0.01"
+                                        class="pl-7 pr-12 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <!-- Category (será escondido condicionalmente) -->
+                            <div id="category-wrapper">
+                                <label for="categoryId" class="block text-sm font-medium text-gray-700">Category</label>
+                                <select id="categoryId" name="categoryId"
+                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                    <option>Loading categories...</option>
+                                </select>
+                            </div>
+
+                            <!-- Checkboxes -->
+                            <div class="flex items-center space-x-6">
+                                <div class="flex items-start">
+                                    <div class="flex items-center h-5">
+                                        <input id="isActive" name="isActive" type="checkbox"
+                                            class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <label for="isActive" class="font-medium text-gray-700">Active</label>
+                                        <p class="text-gray-500">Make this product available for purchase.</p>
+                                    </div>
+                                </div>
+                                <!-- Include in All Access (será escondido condicionalmente) -->
+                                <div id="all-access-wrapper" class="flex items-start">
+                                    <div class="flex items-center h-5">
+                                        <input id="isAllAccessIncluded" name="isAllAccessIncluded" type="checkbox"
+                                            class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <label for="isAllAccessIncluded" class="font-medium text-gray-700">Include in
+                                            "All Access"</label>
+                                        <p class="text-gray-500">Grant access with the subscription.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-5 border-t border-gray-200">
+                            <div class="flex justify-end">
+                                <a href="/admin/products"
+                                    class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Cancel
+                                </a>
+                                <button type="submit"
+                                    class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/public/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const productId = window.location.pathname.split('/').pop();
+            const form = document.getElementById('edit-product-form');
+            const categoryWrapper = document.getElementById('category-wrapper');
+            const allAccessWrapper = document.getElementById('all-access-wrapper');
+            const pageHeader = document.getElementById('page-header');
+
+            // --- FUNÇÃO PARA CARREGAR CATEGORIAS ---
+            async function loadCategories(selectedCategoryId) {
+                const categorySelect = document.getElementById('categoryId');
+                try {
+                    const response = await fetch('/api/admin/categories', { credentials: 'include' });
+                    if (!response.ok) throw new Error('Failed to fetch categories');
+                    const { categories } = await response.json();
+
+                    categorySelect.innerHTML = ''; // Limpa o "Loading..."
+                    if (categories.length === 0) {
+                        categorySelect.innerHTML = '<option value="">No categories found</option>';
+                        return;
+                    }
+
+                    categories.forEach(cat => {
+                        const option = new Option(cat.name, cat.id);
+                        if (cat.id === selectedCategoryId) {
+                            option.selected = true;
+                        }
+                        categorySelect.appendChild(option);
+                    });
+                } catch (error) {
+                    categorySelect.innerHTML = `<option>${error.message}</option>`;
+                }
+            }
+
+            // 1. Buscar dados do produto
+            try {
+                const response = await fetch(`/api/admin/products/${productId}`, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch product data.');
+
+                const { product } = await response.json();
+
+                // Popula os campos do formulário
+                pageHeader.innerHTML = `Edit Product: <span class="text-blue-600">${product.name}</span>`;
+                form.elements.name.value = product.name;
+                form.elements.description.value = product.description || '';
+                form.elements.price.value = parseFloat(product.price).toFixed(2);
+                form.elements.isActive.checked = product.isActive;
+
+                // LÓGICA CONDICIONAL PARA O "ALL ACCESS PASS"
+                if (product.name === 'All Access Pass') {
+                    form.elements.name.disabled = true; // Não pode renomear o All Access
+                    categoryWrapper.classList.add('hidden');
+                    allAccessWrapper.classList.add('hidden');
+                } else {
+                    form.elements.isAllAccessIncluded.checked = product.isAllAccessIncluded;
+                    await loadCategories(product.categoryId); // Carrega as categorias e seleciona a correta
+                }
+
+            } catch (error) {
+                alert(`Error loading product data: ${error.message}`);
+                window.location.href = '/admin/products';
+            }
+
+            // 2. Evento de submit para ATUALIZAR
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // *** CORREÇÃO: Construção manual do objeto de dados ***
+                const data = {
+                    name: form.elements.name.value,
+                    description: form.elements.description.value,
+                    price: parseFloat(form.elements.price.value),
+                    isActive: form.elements.isActive.checked
+                };
+
+                if (!categoryWrapper.classList.contains('hidden')) {
+                    data.categoryId = parseInt(form.elements.categoryId.value, 10);
+                }
+                if (!allAccessWrapper.classList.contains('hidden')) {
+                    data.isAllAccessIncluded = form.elements.isAllAccessIncluded.checked;
+                }
+
+                if (form.elements.name.disabled) {
+                    delete data.name;
+                }
+
+                try {
+                    const response = await fetch(`/api/admin/products/${productId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message || (result.details ? result.details.join(', ') : 'An unknown error occurred.'));
+
+                    alert('Product updated successfully!');
+                    window.location.href = '/admin/products';
+                } catch (error) {
+                    alert(`Error updating product: ${error.message}`);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

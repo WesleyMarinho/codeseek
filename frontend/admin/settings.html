@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - DigiServer Admin</title>
+     <script src="https://cdn.tailwindcss.com"></script>
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <link rel="stylesheet" href="/public/css/admin.css">
+     <!-- Editor.js Dependencies -->
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.28.2"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.7.0"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.8.0"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@2.10.0"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.5.0"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.8.0"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.3.0"></script>
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+
+<body class="h-full">
+    <div id="notification-container"></div>
+
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <nav class="flex-1 p-4">
+                <ul>
+                    <li class="mb-2"><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li class="mb-2"><a href="/admin/users"
+                            class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-users mr-3"></i>Users</a></li>
+                    <li class="mb-2"><a href="/admin/products"
+                            class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-boxes mr-3"></i>Products</a></li>
+                    <li class="mb-2"><a href="/admin/categories"
+                            class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-tags mr-3"></i>Categories</a></li>
+                    <li class="mb-2"><a href="/admin/subscriptions"
+                            class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-sync-alt mr-3"></i>Subscriptions</a></li>
+                    <li class="mb-2"><a href="/admin/licenses"
+                            class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-key mr-3"></i>Licenses</a></li>
+                    <li class="mb-2"><a href="/admin/webhooks"
+                            class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                                class="fas fa-bolt mr-3"></i>Webhooks</a></li>
+                    <li class="mb-2"><a href="/admin/settings"
+                            class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i
+                                class="fas fa-cog mr-3"></i>Settings</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
+                        class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 overflow-auto">
+            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Application Settings</h1>
+                </div>
+            </header>
+
+            <div class="p-6">
+                <div class="flex space-x-6">
+                    <!-- Settings Navigation -->
+                    <aside class="w-1/4">
+                        <nav class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                            <div class="space-y-1">
+                                <a href="#site" id="nav-site" class="group settings-nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200">
+                                    <i class="fas fa-globe-americas mr-3 text-gray-400 group-hover:text-gray-600"></i>
+                                    Site Settings
+                                </a>
+                                <a href="#payments" id="nav-payments" class="group settings-nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200">
+                                    <i class="fas fa-credit-card mr-3 text-gray-400 group-hover:text-gray-600"></i>
+                                    Payments
+                                </a>
+                                <a href="#smtp" id="nav-smtp" class="group settings-nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200">
+                                    <i class="fas fa-server mr-3 text-gray-400 group-hover:text-gray-600"></i>
+                                    SMTP Settings
+                                </a>
+                                <a href="#emails" id="nav-emails" class="group settings-nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200">
+                                    <i class="fas fa-envelope-open-text mr-3 text-gray-400 group-hover:text-gray-600"></i>
+                                    Emails
+                                </a>
+                            </div>
+                        </nav>
+                    </aside>
+
+                    <!-- Settings Content -->
+                    <div class="w-3/4">
+                        <div id="content-site" class="settings-content-panel">
+                            <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-6">Site Settings</h3>
+                                <form id="site-settings-form" class="space-y-6">
+                                    <!-- Site Name -->
+                                    <div>
+                                        <label for="site_name" class="block text-sm font-medium text-gray-700 mb-2">Site Name</label>
+                                        <input type="text" name="site_name" id="site_name"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                    </div>
+                                    <!-- Logo Upload -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Logo</label>
+                                        <div class="mt-1 p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-gray-400 transition duration-200">
+                                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                            <p class="text-sm text-gray-600">Logo upload component here</p>
+                                        </div>
+                                    </div>
+                                    <!-- Favicon Upload -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Favicon</label>
+                                        <div class="mt-1 p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-gray-400 transition duration-200">
+                                            <i class="fas fa-image text-3xl text-gray-400 mb-2"></i>
+                                            <p class="text-sm text-gray-600">Favicon upload component here</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end pt-4 border-t border-gray-200">
+                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">Save Site Settings</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div id="content-payments" class="settings-content-panel hidden">
+                            <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-6">Chargebee Configuration</h3>
+                                <form id="payments-settings-form" class="space-y-6">
+                                    <!-- Chargebee Site -->
+                                    <div>
+                                        <label for="chargebee_site" class="block text-sm font-medium text-gray-700 mb-2">Chargebee Site</label>
+                                        <input type="text" name="chargebee_site" id="chargebee_site"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="your-site">
+                                        <p class="mt-2 text-sm text-gray-500">Your Chargebee site name (e.g., 'your-site' from your-site.chargebee.com)</p>
+                                    </div>
+                                    <!-- Chargebee API Key -->
+                                    <div>
+                                        <label for="chargebee_api_key" class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                                        <input type="password" name="chargebee_api_key" id="chargebee_api_key"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                        <p class="mt-2 text-sm text-gray-500">Your Chargebee API key for server-side operations</p>
+                                    </div>
+                                    <!-- Chargebee Publishable Key -->
+                                    <div>
+                                        <label for="chargebee_publishable_key" class="block text-sm font-medium text-gray-700 mb-2">Publishable Key</label>
+                                        <input type="text" name="chargebee_publishable_key" id="chargebee_publishable_key"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                        <p class="mt-2 text-sm text-gray-500">Your Chargebee publishable key for client-side operations</p>
+                                    </div>
+                                    <!-- Chargebee Webhook Username -->
+                                    <div>
+                                        <label for="chargebee_webhook_username" class="block text-sm font-medium text-gray-700 mb-2">Webhook Username</label>
+                                        <input type="text" name="chargebee_webhook_username" id="chargebee_webhook_username"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                        <p class="mt-2 text-sm text-gray-500">Username for webhook authentication</p>
+                                    </div>
+                                    <!-- Chargebee Webhook Password -->
+                                    <div>
+                                        <label for="chargebee_webhook_password" class="block text-sm font-medium text-gray-700 mb-2">Webhook Password</label>
+                                        <input type="password" name="chargebee_webhook_password" id="chargebee_webhook_password"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                        <p class="mt-2 text-sm text-gray-500">Password for webhook authentication</p>
+                                    </div>
+                                    <div class="flex justify-end pt-4 border-t border-gray-200">
+                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">Save Payment Settings</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div id="content-smtp" class="settings-content-panel hidden">
+                            <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-6">SMTP Settings</h3>
+                                <form id="smtp-settings-form" class="space-y-6">
+                                    <!-- SMTP Host -->
+                                    <div>
+                                        <label for="smtp_host" class="block text-sm font-medium text-gray-700 mb-2">SMTP Host</label>
+                                        <input type="text" name="smtp_host" id="smtp_host"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="smtp.gmail.com">
+                                    </div>
+                                    <!-- SMTP Port -->
+                                    <div>
+                                        <label for="smtp_port" class="block text-sm font-medium text-gray-700 mb-2">SMTP Port</label>
+                                        <input type="number" name="smtp_port" id="smtp_port"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="587">
+                                    </div>
+                                    <!-- SMTP User -->
+                                    <div>
+                                        <label for="smtp_user" class="block text-sm font-medium text-gray-700 mb-2">SMTP Username</label>
+                                        <input type="email" name="smtp_user" id="smtp_user"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="your-email@gmail.com">
+                                    </div>
+                                    <!-- SMTP Password -->
+                                    <div>
+                                        <label for="smtp_pass" class="block text-sm font-medium text-gray-700 mb-2">SMTP Password</label>
+                                        <input type="password" name="smtp_pass" id="smtp_pass" autocomplete="current-password" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                        <p class="mt-2 text-sm text-gray-500">Use an app password for Gmail or other providers that require it.</p>
+                                    </div>
+                                    <!-- From Email -->
+                                    <div>
+                                        <label for="smtp_from_email" class="block text-sm font-medium text-gray-700 mb-2">Email do Remetente</label>
+                                        <input type="email" name="smtp_from_email" id="smtp_from_email"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="noreply@yoursite.com">
+                                        <p class="mt-2 text-sm text-gray-500">Email que aparecerá como remetente dos emails enviados.</p>
+                                    </div>
+                                    <!-- From Name -->
+                                    <div>
+                                        <label for="smtp_from_name" class="block text-sm font-medium text-gray-700 mb-2">Nome do Remetente</label>
+                                        <input type="text" name="smtp_from_name" id="smtp_from_name"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="DigiServer">
+                                        <p class="mt-2 text-sm text-gray-500">Nome que aparecerá como remetente dos emails enviados.</p>
+                                    </div>
+                                    <!-- Test Email -->
+                                    <div>
+                                        <label for="smtp_test_email" class="block text-sm font-medium text-gray-700 mb-2">Email para Testes</label>
+                                        <input type="email" name="smtp_test_email" id="smtp_test_email"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="test@example.com">
+                                        <p class="mt-2 text-sm text-gray-500">Email que receberá os testes de envio.</p>
+                                    </div>
+                                    <div class="flex justify-between pt-4 border-t border-gray-200">
+                                        <button type="button" id="test-smtp-connection" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200">Testar Conexão SMTP</button>
+                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">Save SMTP Settings</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div id="content-emails" class="settings-content-panel hidden">
+                            <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h3 class="text-lg font-semibold text-gray-900">Email Templates</h3>
+                                    <div class="flex space-x-2">
+                                        <input type="email" id="test-email" placeholder="Email para teste" 
+                                            class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <button id="save-templates-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition duration-200">
+                                            Salvar Templates
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Template Tabs -->
+                                <div class="border-b border-gray-200 mb-6">
+                                    <nav class="-mb-px flex space-x-8">
+                                        <button class="template-tab-btn active py-2 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600" data-template="welcome">Boas-vindas</button>
+                                        <button class="template-tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-template="purchase">Compra</button>
+                                        <button class="template-tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-template="renewal">Renovação</button>
+                                        <button class="template-tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-template="password_reset">Reset Senha</button>
+                                        <button class="template-tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-template="payment_failed">Falha Pagamento</button>
+                                        <button class="template-tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-template="license_activated">Licença Ativada</button>
+                                        <button class="template-tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-template="subscription_cancelled">Assinatura Cancelada</button>
+                                    </nav>
+                                </div>
+
+                                <!-- Template Content -->
+                                <div id="template-content">
+                                    <!-- Subject Field -->
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Assunto do Email</label>
+                                        <input type="text" id="template-subject" 
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+
+                                    <!-- Body Field with Editor.js -->
+                                    <div class="mb-4">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="block text-sm font-medium text-gray-700">Corpo do Email</label>
+                                            <button id="send-test-email" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition duration-200">
+                                                Enviar Teste
+                                            </button>
+                                        </div>
+                                        <div id="email-editor" class="border border-gray-300 rounded-md min-h-[300px] p-4"></div>
+                                    </div>
+
+                                    <!-- Variables Help -->
+                                    <div class="bg-gray-50 p-4 rounded-md">
+                                        <h4 class="text-sm font-medium text-gray-900 mb-2">Variáveis Disponíveis:</h4>
+                                        <div class="text-xs text-gray-600 space-y-1">
+                                            <p><code>{{username}}</code> - Nome do usuário</p>
+                                            <p><code>{{siteName}}</code> - Nome do site</p>
+                                            <p><code>{{supportEmail}}</code> - Email de suporte</p>
+                                            <p><code>{{currentYear}}</code> - Ano atual</p>
+                                            <p><code>{{productName}}</code> - Nome do produto</p>
+                                            <p><code>{{amount}}</code> - Valor</p>
+                                            <p><code>{{licenseKey}}</code> - Chave da licença</p>
+                                            <p><code>{{resetLink}}</code> - Link de reset de senha</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/core.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.settings-nav-item');
+            const contentPanels = document.querySelectorAll('.settings-content-panel');
+            let emailEditor = null;
+            let currentTemplate = 'welcome';
+            let emailTemplates = {};
+
+            // Initialize Editor.js
+            function initializeEmailEditor() {
+                // Check if Editor.js and tools are loaded
+                if (typeof EditorJS === 'undefined') {
+                    console.error('EditorJS not loaded');
+                    showNotification('Editor não carregado. Recarregue a página.', 'error');
+                    return;
+                }
+
+                // Check if all required tools are loaded
+                const requiredTools = ['Header', 'List', 'Quote', 'CodeTool', 'Delimiter'];
+                const missingTools = requiredTools.filter(tool => typeof window[tool] === 'undefined');
+                
+                if (missingTools.length > 0) {
+                    console.error('Missing Editor.js tools:', missingTools);
+                    showNotification(`Ferramentas do editor não carregadas: ${missingTools.join(', ')}. Recarregue a página.`, 'error');
+                    return;
+                }
+
+                if (emailEditor) {
+                    emailEditor.destroy();
+                }
+
+                try {
+                    emailEditor = new EditorJS({
+                        holder: 'email-editor',
+                        tools: {
+                            header: {
+                                class: window.Header,
+                                config: {
+                                    placeholder: 'Digite um título...',
+                                levels: [1, 2, 3, 4, 5, 6],
+                                defaultLevel: 2
+                            }
+                        },
+                        list: {
+                            class: window.List,
+                            inlineToolbar: true,
+                            config: {
+                                defaultStyle: 'unordered'
+                            }
+                        },
+                        quote: {
+                            class: window.Quote,
+                            inlineToolbar: true,
+                            config: {
+                                quotePlaceholder: 'Digite uma citação...',
+                                captionPlaceholder: 'Autor da citação'
+                            }
+                        },
+                        code: {
+                            class: window.CodeTool
+                        },
+                        delimiter: {
+                            class: window.Delimiter
+                        }
+                    },
+                    placeholder: 'Comece a escrever o template do email...',
+                    data: {
+                        time: Date.now(),
+                        blocks: [],
+                        version: '2.28.2'
+                    },
+                    onChange: function() {
+                        console.log('Editor content changed');
+                    }
+                });
+                
+                console.log('Editor.js initialized successfully');
+                } catch (error) {
+                    console.error('Error initializing Editor.js:', error);
+                    showNotification('Erro ao inicializar o editor. Verifique o console.', 'error');
+                }
+            }
+
+            // Function to switch tabs
+            const switchTab = (targetId) => {
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                });
+
+                const targetLink = document.querySelector(`a[href="#${targetId}"]`);
+                if (targetLink) {
+                    targetLink.classList.add('active');
+                }
+
+                contentPanels.forEach(panel => {
+                    panel.classList.add('hidden');
+                });
+
+                const targetPanel = document.getElementById(`content-${targetId}`);
+                if (targetPanel) {
+                    targetPanel.classList.remove('hidden');
+                }
+
+                // Initialize editor when switching to emails tab
+                if (targetId === 'emails' && !emailEditor) {
+                    setTimeout(() => {
+                        initializeEmailEditor();
+                        loadEmailTemplates();
+                    }, 500);
+                }
+            };
+
+            // Handle clicks on navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = e.currentTarget.getAttribute('href').substring(1);
+                    window.location.hash = targetId;
+                    switchTab(targetId);
+                });
+            });
+
+            // Template tab switching
+            function switchTemplateTab(templateKey) {
+                // Save current template before switching
+                if (emailEditor && currentTemplate) {
+                    saveCurrentTemplate();
+                }
+
+                currentTemplate = templateKey;
+
+                // Update tab appearance
+                document.querySelectorAll('.template-tab-btn').forEach(btn => {
+                    btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+
+                const activeTab = document.querySelector(`[data-template="${templateKey}"]`);
+                if (activeTab) {
+                    activeTab.classList.add('active', 'border-blue-500', 'text-blue-600');
+                    activeTab.classList.remove('border-transparent', 'text-gray-500');
+                }
+
+                // Load template data
+                loadTemplateData(templateKey);
+            }
+
+            // Save current template data
+            async function saveCurrentTemplate() {
+                if (!emailEditor || !currentTemplate) return;
+
+                try {
+                    if (!emailEditor) {
+                        showNotification('Editor não inicializado.', 'error');
+                        return;
+                    }
+                    
+                    const editorData = await emailEditor.save();
+                    const subject = document.getElementById('template-subject').value;
+
+                    if (!emailTemplates[currentTemplate]) {
+                        emailTemplates[currentTemplate] = {};
+                    }
+
+                    emailTemplates[currentTemplate].subject = subject;
+                    emailTemplates[currentTemplate].body = editorData;
+                } catch (error) {
+                    console.error('Error saving template:', error);
+                    showNotification('Erro ao salvar template.', 'error');
+                }
+            }
+
+            // Load template data
+            function loadTemplateData(templateKey) {
+                const template = emailTemplates[templateKey] || { subject: '', body: {} };
+                
+                // Load subject
+                document.getElementById('template-subject').value = template.subject || '';
+
+                // Load editor content
+                if (emailEditor) {
+                    let bodyData = template.body;
+                    
+                    // Garantir que bodyData seja um objeto válido do Editor.js
+                    if (!bodyData || typeof bodyData !== 'object') {
+                        bodyData = {
+                            time: Date.now(),
+                            blocks: [],
+                            version: '2.28.2'
+                        };
+                    }
+                    
+                    // Se for uma string, converter para formato Editor.js
+                    if (typeof bodyData === 'string') {
+                        bodyData = {
+                            time: Date.now(),
+                            blocks: [{
+                                id: 'default-paragraph',
+                                type: 'paragraph',
+                                data: { text: bodyData }
+                            }],
+                            version: '2.28.2'
+                        };
+                    }
+                    
+                    // Garantir que tenha a estrutura mínima necessária
+                    if (!bodyData.blocks) {
+                        bodyData.blocks = [];
+                    }
+                    if (!bodyData.time) {
+                        bodyData.time = Date.now();
+                    }
+                    if (!bodyData.version) {
+                        bodyData.version = '2.28.2';
+                    }
+                    
+                    try {
+                        emailEditor.render(bodyData);
+                    } catch (error) {
+                        console.error('Error rendering editor data:', error);
+                        // Fallback para dados vazios em caso de erro
+                        emailEditor.render({
+                            time: Date.now(),
+                            blocks: [],
+                            version: '2.28.2'
+                        });
+                    }
+                }
+            }
+
+            // Handle template tab clicks
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('template-tab-btn')) {
+                    e.preventDefault();
+                    const templateKey = e.target.getAttribute('data-template');
+                    switchTemplateTab(templateKey);
+                }
+            });
+
+            // Load email templates
+            async function loadEmailTemplates() {
+                try {
+                    const response = await fetch('/api/admin/email/templates', { credentials: 'include' });
+                    if (!response.ok) throw new Error('Failed to load email templates');
+                    
+                    emailTemplates = await response.json();
+                    
+                    // Se não há templates, criar templates padrão vazios
+                    if (Object.keys(emailTemplates).length === 0) {
+                        const templateKeys = ['welcome', 'purchase', 'renewal', 'password_reset', 'payment_failed', 'license_activated', 'subscription_cancelled'];
+                        templateKeys.forEach(key => {
+                            emailTemplates[key] = {
+                                subject: '',
+                                body: {
+                                    time: Date.now(),
+                                    blocks: [],
+                                    version: '2.28.2'
+                                }
+                            };
+                        });
+                    }
+                    
+                    loadTemplateData(currentTemplate);
+                } catch (error) {
+                    console.error('Error loading email templates:', error);
+                    showNotification('Erro ao carregar templates de email.', 'error');
+                    
+                    // Criar templates padrão em caso de erro
+                    const templateKeys = ['welcome', 'purchase', 'renewal', 'password_reset', 'payment_failed', 'license_activated', 'subscription_cancelled'];
+                    emailTemplates = {};
+                    templateKeys.forEach(key => {
+                        emailTemplates[key] = {
+                            subject: '',
+                            body: {
+                                time: Date.now(),
+                                blocks: [],
+                                version: '2.28.2'
+                            }
+                        };
+                    });
+                    loadTemplateData(currentTemplate);
+                }
+            }
+
+            // Save email templates
+            async function saveEmailTemplates() {
+                try {
+                    // Save current template first
+                    await saveCurrentTemplate();
+
+                    const response = await fetch('/api/admin/email/templates', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(emailTemplates)
+                    });
+
+                    if (!response.ok) throw new Error('Failed to save email templates');
+                    
+                    showNotification('Templates de email salvos com sucesso!', 'success');
+                } catch (error) {
+                    console.error('Error saving email templates:', error);
+                    showNotification('Erro ao salvar templates de email.', 'error');
+                }
+            }
+
+            // Send test email
+            async function sendTestEmail() {
+                const testEmail = document.getElementById('test-email').value;
+                if (!testEmail) {
+                    showNotification('Por favor, insira um email para teste.', 'error');
+                    return;
+                }
+
+                try {
+                    // Save current template first
+                    await saveCurrentTemplate();
+
+                    const response = await fetch('/api/admin/email/test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            templateKey: currentTemplate,
+                            testEmail: testEmail
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to send test email');
+                    
+                    showNotification('Email de teste enviado com sucesso!', 'success');
+                } catch (error) {
+                    console.error('Error sending test email:', error);
+                    showNotification('Erro ao enviar email de teste.', 'error');
+                }
+            }
+
+            // Test SMTP connection
+            async function testSMTPConnection() {
+                try {
+                    // Coletar dados do formulário SMTP
+                    const smtpData = {
+                        smtp_host: document.getElementById('smtp_host').value,
+                        smtp_port: document.getElementById('smtp_port').value,
+                        smtp_user: document.getElementById('smtp_user').value,
+                        smtp_pass: document.getElementById('smtp_pass').value,
+                        smtp_from_email: document.getElementById('smtp_from_email').value,
+                        smtp_from_name: document.getElementById('smtp_from_name').value,
+                        test_email: document.getElementById('smtp_test_email').value
+                    };
+
+                    // Validar campos obrigatórios
+                    if (!smtpData.smtp_host || !smtpData.smtp_port || !smtpData.smtp_user || !smtpData.smtp_pass || !smtpData.test_email) {
+                        showNotification('Por favor, preencha todos os campos SMTP obrigatórios e o email de teste.', 'error');
+                        return;
+                    }
+
+                    const response = await fetch('/api/admin/settings/smtp/test', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(smtpData)
+                    });
+
+                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.message || 'SMTP test failed');
+                    }
+                    
+                    showNotification(result.message || 'Conexão SMTP testada com sucesso!', 'success');
+                } catch (error) {
+                    console.error('Error testing SMTP:', error);
+                    showNotification(error.message || 'Erro ao testar conexão SMTP.', 'error');
+                }
+            }
+
+            // Load settings and populate forms
+            async function loadSettings() {
+                try {
+                    const response = await fetch('/api/admin/settings', { credentials: 'include' });
+                    if (!response.ok) throw new Error('Failed to load settings');
+                    const settings = await response.json();
+
+                    // Populate Site Settings
+                    document.getElementById('site_name').value = settings.site_name?.value || '';
+
+                    // Populate Payments Settings
+                    document.getElementById('chargebee_site').value = settings.chargebee_site?.value || '';
+                    document.getElementById('chargebee_api_key').value = settings.chargebee_api_key?.value || '';
+                    document.getElementById('chargebee_webhook_username').value = settings.chargebee_webhook_username?.value || '';
+                    document.getElementById('chargebee_webhook_password').value = settings.chargebee_webhook_password?.value || '';
+
+                    // Populate SMTP Settings
+                    document.getElementById('smtp_host').value = settings.smtp_host?.value || '';
+                    document.getElementById('smtp_port').value = settings.smtp_port?.value || '';
+                    document.getElementById('smtp_user').value = settings.smtp_user?.value || '';
+                    document.getElementById('smtp_pass').value = settings.smtp_pass?.value || '';
+                    document.getElementById('smtp_from_email').value = settings.smtp_from_email?.value || '';
+                    document.getElementById('smtp_from_name').value = settings.smtp_from_name?.value || '';
+                    document.getElementById('smtp_test_email').value = settings.smtp_test_email?.value || '';
+                    document.getElementById('test-email').value = settings.smtp_test_email?.value || '';
+                } catch (error) {
+                    console.error('Error loading settings:', error);
+                    showNotification('Erro ao carregar configurações.', 'error');
+                }
+            }
+
+            // Handle form submissions
+            async function handleFormSubmit(e) {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+
+                try {
+                    const response = await fetch('/api/admin/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(data),
+                    });
+                    if (!response.ok) throw new Error('Failed to save settings');
+                    showNotification('Configurações salvas com sucesso!', 'success');
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    showNotification('Erro ao salvar configurações.', 'error');
+                }
+            }
+
+            // Event listeners
+            document.getElementById('site-settings-form').addEventListener('submit', handleFormSubmit);
+            document.getElementById('payments-settings-form').addEventListener('submit', handleFormSubmit);
+            document.getElementById('smtp-settings-form').addEventListener('submit', handleFormSubmit);
+            document.getElementById('save-templates-btn').addEventListener('click', saveEmailTemplates);
+            document.getElementById('send-test-email').addEventListener('click', sendTestEmail);
+            document.getElementById('test-smtp-connection').addEventListener('click', testSMTPConnection);
+
+            // Check for hash on page load
+            const currentHash = window.location.hash.substring(1);
+            if (currentHash) {
+                switchTab(currentHash);
+                // Initialize editor if emails tab is active
+                if (currentHash === 'emails') {
+                    setTimeout(() => {
+                        initializeEmailEditor();
+                        loadEmailTemplates();
+                    }, 1000);
+                }
+            } else {
+                switchTab('site');
+            }
+
+            // Load initial data
+            loadSettings();
+            loadEmailTemplates();
+        });
+    </script>
+</body>
+
+</html>

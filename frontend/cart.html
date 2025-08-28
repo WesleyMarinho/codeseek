@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - DigiServer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
+    <link rel="stylesheet" href="/public/css/cart.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+    <header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-server text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-800">DigiServer</span>
+                </a>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="/" class="text-blue-600 font-semibold">Home</a>
+                    <a href="/products" class="text-gray-600 hover:text-blue-600 font-medium">Products</a>
+                    <a href="/product/1" class="text-gray-600 hover:text-blue-600 font-medium">All Access Pass</a>
+                </nav>
+                <div class="flex items-center space-x-4">
+                    <a href="/cart" class="relative text-gray-600 hover:text-blue-600">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                        <span id="cart-count"
+                            class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+                    </a>
+                    <div class="hidden md:flex items-center space-x-3">
+                        <a href="/login" class="text-gray-600 hover:text-blue-600 font-medium">Login</a>
+                        <a href="/register"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">Sign
+                            Up</a>
+                    </div>
+                    <button id="mobile-menu-button" class="md:hidden text-gray-600 hover:text-blue-600">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-white/95 backdrop-blur border-t border-gray-200">
+        <div class="px-4 py-4 space-y-3">
+            <a href="/"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">Home</a>
+            <a href="/products" class="block text-gray-600 hover:text-blue-600 font-medium py-2">Products</a>
+            <a href="/product/1" class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">All Access Pass</a>
+            <a href="/login"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">Login</a>
+            <a href="/register"
+                class="block text-blue-600 font-semibold py-2">Sign Up</a>
+        </div>
+    </div>
+
+    <main class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Your Shopping Cart</h1>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading cart...</p>
+        </div>
+
+        <!-- Empty Cart State -->
+        <div id="empty-cart" class="text-center py-16 hidden">
+            <div class="max-w-md mx-auto">
+                <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-600 mb-2">Your cart is empty</h2>
+                <p class="text-gray-500 mb-6">Add some amazing products to get started!</p>
+                <a href="products.html"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300">
+                    Browse Products
+                </a>
+            </div>
+        </div>
+
+        <!-- Cart Content -->
+        <div id="cart-content" class="flex flex-col lg:flex-row gap-8 hidden">
+            <!-- Cart Items -->
+            <div class="w-full lg:w-2/3">
+                <div class="bg-white rounded-lg shadow-md">
+                    <div class="hidden md:grid grid-cols-6 gap-4 p-4 font-semibold border-b">
+                        <div class="col-span-3">Product</div>
+                        <div class="text-center">Price</div>
+                        <div class="text-center">License</div>
+                        <div class="text-right">Actions</div>
+                    </div>
+                    <div id="cart-items">
+                        <!-- Cart items will be loaded here -->
+                    </div>
+                </div>
+                <a href="products.html" class="inline-block mt-6 text-blue-600 hover:underline">
+                    <i class="fas fa-arrow-left mr-2"></i>Continue Shopping
+                </a>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="w-full lg:w-1/3">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-6">Order Summary</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal</span>
+                            <span class="font-semibold" id="subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Taxes</span>
+                            <span class="font-semibold" id="tax">$0.00</span>
+                        </div>
+                        <div class="border-t pt-4 mt-4 flex justify-between items-center">
+                            <span class="text-xl font-bold">Total</span>
+                            <span class="text-xl font-bold" id="total">$0.00</span>
+                        </div>
+                    </div>
+                    <button id="checkout-btn"
+                        class="block w-full text-center bg-blue-600 text-white mt-6 py-3 rounded-md font-semibold hover:bg-blue-700 transition duration-300">
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto px-6 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">DigiServer</h3>
+                    <p class="text-gray-400 text-sm">Empowering creators with high-quality digital tools.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Links</h3>
+                    <ul class="space-y-2"><a href="/products" class="text-gray-400 hover:text-white">Products</a></ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Legal</h3>
+                    <ul class="space-y-2">
+                        <li><a href="/terms" class="text-gray-400 hover:text-white">Terms</a></li>
+                        <li><a href="/privacy" class="text-gray-400 hover:text-white">Privacy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-gray-700 pt-6 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 DigiServer. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        // Cart functionality
+        class CartManager {
+            constructor() {
+                this.init();
+            }
+
+            async init() {
+                await this.loadCart();
+                this.bindEvents();
+            }
+
+            async loadCart() {
+                try {
+                    const response = await fetch('/api/cart');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.renderCart(data.cart);
+                    } else {
+                        this.showError('Failed to load cart');
+                    }
+                } catch (error) {
+                    console.error('Error loading cart:', error);
+                    this.showError('Failed to load cart');
+                } finally {
+                    document.getElementById('loading-state').classList.add('hidden');
+                }
+            }
+
+            renderCart(cart) {
+                const cartItemsContainer = document.getElementById('cart-items');
+                const emptyCart = document.getElementById('empty-cart');
+                const cartContent = document.getElementById('cart-content');
+
+                if (cart.items.length === 0) {
+                    emptyCart.classList.remove('hidden');
+                    cartContent.classList.add('hidden');
+                    return;
+                }
+
+                cartContent.classList.remove('hidden');
+                emptyCart.classList.add('hidden');
+
+                // Render cart items
+                cartItemsContainer.innerHTML = cart.items.map(item => {
+                    const imageHTML = item.featuredMedia ?
+                        `<img src="/uploads/products/images/${item.featuredMedia}" alt="${item.name}" class="w-20 h-20 rounded-md object-cover" data-fallback-type="product">` :
+                        `<div class="w-20 h-20 rounded-md bg-gray-200 flex items-center justify-center">
+                            <i class="fas fa-star text-yellow-400 text-2xl"></i>
+                        </div>`;
+                    
+                    return `
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-center p-4 border-b cart-item" data-product-id="${item.productId}">
+                        <div class="col-span-3 flex items-center gap-4">
+                            ${imageHTML}
+                            <div>
+                                <h3 class="font-semibold">${item.name}</h3>
+                                <p class="text-sm text-gray-500">${item.category || 'Digital Product'}</p>
+                            </div>
+                        </div>
+                        <div class="text-center font-medium">$${parseFloat(item.price).toFixed(2)}</div>
+                        <div class="text-center text-sm text-gray-600">One-time</div>
+                        <div class="text-right">
+                            <button class="text-red-500 hover:text-red-700 text-sm font-semibold remove-item" 
+                                    data-product-id="${item.productId}">
+                                <i class="fas fa-trash mr-1"></i>Remove
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                // Update totals
+                document.getElementById('subtotal').textContent = `$${cart.subtotal}`;
+                document.getElementById('tax').textContent = `$${cart.tax}`;
+                document.getElementById('total').textContent = `$${cart.total}`;
+            }
+
+            bindEvents() {
+                // Remove item buttons
+                document.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
+                        const button = e.target.classList.contains('remove-item') ? e.target : e.target.closest('.remove-item');
+                        const productId = button.dataset.productId;
+                        await this.removeItem(productId);
+                    }
+                });
+
+                // Checkout button
+                document.getElementById('checkout-btn').addEventListener('click', async () => {
+                    await this.proceedToCheckout();
+                });
+            }
+
+            async removeItem(productId) {
+                try {
+                    const response = await fetch(`/api/cart/item/${productId}`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Remove item from DOM
+                        const itemElement = document.querySelector(`[data-product-id="${productId}"]`);
+                        if (itemElement) {
+                            itemElement.remove();
+                        }
+
+                        // Reload cart to update totals
+                        await this.loadCart();
+                        this.showSuccess('Item removed from cart');
+                    } else {
+                        this.showError(data.message || 'Failed to remove item');
+                    }
+                } catch (error) {
+                    console.error('Error removing item:', error);
+                    this.showError('Failed to remove item');
+                }
+            }
+
+            async proceedToCheckout() {
+                try {
+                    const response = await fetch('/api/checkout/cart', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Redirect to Chargebee Hosted Pages
+                        window.location.href = data.checkoutUrl;
+                    } else {
+                        if (response.status === 401) {
+                            // User not logged in
+                            this.showError('Please log in to proceed with checkout');
+                            setTimeout(() => {
+                                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                            }, 2000);
+                        } else {
+                            this.showError(data.message || 'Failed to create checkout session');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error creating checkout:', error);
+                    this.showError('Failed to proceed to checkout');
+                }
+            }
+
+            showSuccess(message) {
+                this.showNotification(message, 'success');
+            }
+
+            showError(message) {
+                this.showNotification(message, 'error');
+            }
+
+            showNotification(message, type) {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                    }`;
+                notification.textContent = message;
+
+                document.body.appendChild(notification);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        }
+
+        // Initialize cart when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CartManager();
+            
+            // Mobile menu functionality
+            document.getElementById('mobile-menu-button')?.addEventListener('click', () => {
+                document.getElementById('mobile-menu')?.classList.toggle('hidden');
+            });
+        });
+    </script>
+    
+    <!-- Core JavaScript for global functionality -->
+    <script src="/public/js/core.js"></script>
+
+</body>
+
+</html>

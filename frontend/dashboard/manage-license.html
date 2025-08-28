@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage License - DigiServer Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-50 font-sans">
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex-col hidden sm:flex">
+            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer</div>
+            <nav class="flex-1 p-4">
+                <ul class="space-y-2">
+                    <li><a href="/dashboard" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/dashboard/products" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-box mr-3"></i>My Products</a></li>
+                    <li><a href="/dashboard/licenses" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-key mr-3"></i>My Licenses</a></li>
+                    <li><a href="/dashboard/billing" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-file-invoice-dollar mr-3"></i>Billing</a></li>
+                    <li><a href="/dashboard/profile" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-user-circle mr-3"></i>Profile</a></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col">
+            <header class="bg-white shadow-sm border-b border-gray-200 p-4 flex justify-between items-center">
+                <div>
+                    <a href="/dashboard/licenses" class="text-sm text-blue-600 hover:underline flex items-center"><i class="fas fa-arrow-left mr-2"></i>Back to My Licenses</a>
+                    <h1 class="text-2xl font-bold text-gray-800 mt-1">Manage License</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-greeting" class="font-semibold text-gray-700">Hello!</span>
+                    <img src="https://picsum.photos/seed/avatar/40/40" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-gray-300">
+                </div>
+            </header>
+
+            <div id="loading-state" class="p-6 text-center text-gray-500">Loading license details...</div>
+            <div id="error-state" class="p-6 text-center text-red-500 hidden"></div>
+            
+            <div id="content-wrapper" class="p-6 flex-1 overflow-y-auto hidden">
+                <!-- License Details -->
+                <section class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+                    <h2 class="text-xl font-bold mb-6 text-gray-800">License Details</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">License Key</h3>
+                            <p id="license-key" class="mt-1 text-gray-900 font-mono bg-gray-100 p-2 rounded"></p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Product</h3>
+                            <p id="product-name" class="mt-1 text-gray-900"></p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500">Usage</h3>
+                            <p id="license-usage" class="mt-1 text-gray-900"></p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Activated Domains -->
+                <section class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h2 class="text-xl font-bold text-gray-800">Activated Domains</h2>
+                        <form id="add-domain-form" class="flex items-center space-x-2 w-full sm:w-auto">
+                            <input id="domain-input" type="text" placeholder="example.com" required class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <button type="submit" class="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm font-medium transition-colors">
+                                <i class="fas fa-plus-circle mr-2"></i>Add
+                            </button>
+                        </form>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Domain</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Activated On</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activations-table-body" class="text-gray-700">
+                                <!-- Ativações serão inseridas aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="/public/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Lógica para obter ID da licença da URL
+            const pathParts = window.location.pathname.split('/');
+            const licenseId = pathParts[pathParts.length - 1];
+
+            if (!licenseId || isNaN(licenseId)) {
+                showError('Invalid license ID in URL.');
+                return;
+            }
+
+            // Busca o nome do usuário para o cabeçalho
+            try {
+                const response = await fetch('/api/user/profile', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('user-greeting').textContent = `Hello, ${data.user.username}!`;
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile", error);
+            }
+
+            await loadLicenseDetails(licenseId);
+
+            // Adicionar evento para o formulário
+            const addDomainForm = document.getElementById('add-domain-form');
+            addDomainForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const domainInput = document.getElementById('domain-input');
+                const domain = domainInput.value.trim();
+                if (domain) {
+                    await addActivation(licenseId, domain);
+                    domainInput.value = ''; // Limpa o input
+                }
+            });
+        });
+
+        function showLoading() {
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('content-wrapper').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('content-wrapper').classList.add('hidden');
+            const errorDiv = document.getElementById('error-state');
+            errorDiv.textContent = `Error: ${message}`;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function showContent() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('content-wrapper').classList.remove('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+        }
+
+        async function loadLicenseDetails(licenseId) {
+            showLoading();
+            try {
+                const response = await fetch(`/api/license/${licenseId}`, { credentials: 'include' });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to fetch license details');
+                }
+                const data = await response.json();
+                renderLicenseDetails(data.license);
+                showContent();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderLicenseDetails(license) {
+            // Preenche os detalhes da licença
+            document.getElementById('license-key').textContent = `${license.key.substring(0, 4)}-XXXX-XXXX-${license.key.substring(license.key.length - 4)}`;
+            document.getElementById('product-name').textContent = license.productName;
+            document.getElementById('license-usage').textContent = `${license.activations.length}/${license.usageLimit} Domains`;
+
+            // Preenche a tabela de ativações
+            const tbody = document.getElementById('activations-table-body');
+            tbody.innerHTML = '';
+            if (license.activations.length > 0) {
+                license.activations.forEach(act => {
+                    const activatedDate = new Date(act.activatedAt).toLocaleDateString();
+                    
+                    // Cria o elemento da linha
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-gray-50';
+                    row.id = `activation-row-${act.id}`;
+
+                    row.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-800">${act.domain}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-500">${activatedDate}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-right">
+                            <button data-license-id="${license.id}" data-activation-id="${act.id}" class="deactivate-btn text-red-600 hover:text-red-800 flex items-center ml-auto text-sm">
+                                <i class="fas fa-trash-alt mr-2"></i>Deactivate
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Adiciona os event listeners a todos os botões de desativação
+                document.querySelectorAll('.deactivate-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const { licenseId, activationId } = event.currentTarget.dataset;
+                        removeActivation(licenseId, activationId);
+                    });
+                });
+
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500">No domains have been activated for this license yet.</td></tr>`;
+            }
+        }
+
+        async function addActivation(licenseId, domain) {
+            try {
+                const response = await fetch(`/api/license/${licenseId}/activations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ domain })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to add domain');
+                }
+                await loadLicenseDetails(licenseId);
+            } catch (error) {
+                alert(`Error adding domain: ${error.message}`);
+            }
+        }
+
+        async function removeActivation(licenseId, activationId) {
+            if (!confirm('Are you sure you want to deactivate this domain?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/license/${licenseId}/activations/${activationId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to deactivate domain');
+                }
+                document.getElementById(`activation-row-${activationId}`).remove();
+            } catch (error) {
+                alert(`Error deactivating domain: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

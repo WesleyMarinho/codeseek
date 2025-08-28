@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - DigiServer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Header/Navigation -->
+    <header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-server text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-800">DigiServer</span>
+                </a>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="/" class="text-gray-600 hover:text-blue-600 font-medium">Home</a>
+                    <a href="/products" class="text-blue-600 font-semibold">Products</a>
+                    <a href="/product/1" class="text-gray-600 hover:text-blue-600 font-medium">All Access Pass</a>
+                </nav>
+                <div class="flex items-center space-x-4">
+                    <a href="/cart" class="relative text-gray-600 hover:text-blue-600">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                        <span id="cart-count"
+                            class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+                    </a>
+                    <div class="hidden md:flex items-center space-x-3">
+                        <a href="/login" class="text-gray-600 hover:text-blue-600 font-medium">Login</a>
+                        <a href="/register"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">Sign
+                            Up</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-white/95 backdrop-blur border-t border-gray-200">
+        <div class="px-4 py-4 space-y-3">
+            <a href="/"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">Home</a>
+            <a href="/products" class="block text-blue-600 font-semibold py-2">Products</a>
+            <a href="/pricing"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">Pricing</a>
+            <a href="/about"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">About</a>
+            <a href="/contact"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">Contact</a>
+            <hr class="border-gray-200 my-3">
+            <a href="/login"
+                class="block text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2">Login</a>
+            <a href="/register"
+                class="block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium text-center">Sign
+                Up</a>
+        </div>
+    </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Our Products</h1>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">Discover our premium digital products and solutions.</p>
+        </div>
+
+        <div class="lg:flex lg:gap-8">
+            <!-- Filters Sidebar -->
+            <aside class="lg:w-80 mb-8 lg:mb-0">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Filters</h3>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <div class="relative"><input type="text" id="search" placeholder="Search..."
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg"><i
+                                class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Categories</label>
+                        <div id="category-filters" class="space-y-2"><label class="flex items-center"><input
+                                    type="radio" name="category" value="all" checked class="text-blue-600"><span
+                                    class="ml-2 text-sm text-gray-700">All Categories</span></label></div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Price Range</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center"><input type="radio" name="price" value="all" checked
+                                    class="text-blue-600"><span class="ml-2 text-sm text-gray-700">All
+                                    Prices</span></label>
+                            <label class="flex items-center"><input type="radio" name="price" value="free"
+                                    class="text-blue-600"><span class="ml-2 text-sm text-gray-700">Free</span></label>
+                            <label class="flex items-center"><input type="radio" name="price" value="under-50"
+                                    class="text-blue-600"><span class="ml-2 text-sm text-gray-700">Under
+                                    $50</span></label>
+                            <label class="flex items-center"><input type="radio" name="price" value="50-100"
+                                    class="text-blue-600"><span class="ml-2 text-sm text-gray-700">$50 -
+                                    $100</span></label>
+                            <label class="flex items-center"><input type="radio" name="price" value="over-100"
+                                    class="text-blue-600"><span class="ml-2 text-sm text-gray-700">Over
+                                    $100</span></label>
+                        </div>
+                    </div>
+                    <button id="clear-filters"
+                        class="w-full text-center text-blue-600 hover:text-blue-700 font-medium">Clear All
+                        Filters</button>
+                </div>
+            </aside>
+
+            <!-- Products Section -->
+            <div class="flex-1">
+                <div
+                    class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex justify-between items-center">
+                    <div id="results-count" class="text-sm text-gray-600"></div>
+                    <div class="flex items-center gap-4">
+                        <select id="sort" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="newest">Newest</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                        </select>
+                        <div class="flex border border-gray-300 rounded-lg overflow-hidden"><button id="grid-view"
+                                class="p-2 text-blue-600"><i class="fas fa-th-large"></i></button><button id="list-view"
+                                class="p-2 text-gray-400"><i class="fas fa-list"></i></button></div>
+                    </div>
+                </div>
+
+                <!-- === INÍCIO DOS ELEMENTOS CORRIGIDOS === -->
+                <!-- Loading State (agora existe) -->
+                <div id="loading-state" class="text-center py-16">
+                    <i class="fas fa-spinner fa-spin text-blue-600 text-4xl"></i>
+                    <p class="text-gray-600 mt-4">Loading products...</p>
+                </div>
+
+                <!-- Products Container -->
+                <div id="products-container" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+                </div>
+
+                <!-- Empty State (agora existe) -->
+                <div id="empty-state" class="hidden text-center py-16">
+                    <i class="fas fa-search text-gray-400 text-5xl mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900">No products found</h3>
+                    <p class="text-gray-600 mt-2">Try adjusting your filters.</p>
+                </div>
+
+                <!-- Error State (agora existe) -->
+                <div id="error-state" class="hidden text-center py-16">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900">Something went wrong</h3>
+                    <p class="text-gray-600 mt-2">We couldn't load the products. Please try again.</p>
+                    <button id="retry-loading"
+                        class="mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">Try Again</button>
+                </div>
+
+                <!-- Pagination (agora existe) -->
+                <nav id="pagination" class="hidden flex items-center justify-center space-x-2 mt-8">
+                    <button id="prev-page" class="px-3 py-2 text-gray-500 hover:text-blue-600 disabled:opacity-50"><i
+                            class="fas fa-chevron-left"></i></button>
+                    <div id="page-numbers" class="flex space-x-1"></div>
+                    <button id="next-page" class="px-3 py-2 text-gray-500 hover:text-blue-600 disabled:opacity-50"><i
+                            class="fas fa-chevron-right"></i></button>
+                </nav>
+                <!-- === FIM DOS ELEMENTOS CORRIGIDOS === -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto px-6 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">DigiServer</h3>
+                    <p class="text-gray-400 text-sm">Empowering creators with high-quality digital tools.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Links</h3>
+                    <ul class="space-y-2"><a href="/products" class="text-gray-400 hover:text-white">Products</a></ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Legal</h3>
+                    <ul class="space-y-2">
+                        <li><a href="/terms" class="text-gray-400 hover:text-white">Terms</a></li>
+                        <li><a href="/privacy" class="text-gray-400 hover:text-white">Privacy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-gray-700 pt-6 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 DigiServer. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/public/js/core.js"></script>
+    <script src="/public/js/cart.js"></script>
+    <script src="/public/js/products.js"></script>
+
+</body>
+
+</html>

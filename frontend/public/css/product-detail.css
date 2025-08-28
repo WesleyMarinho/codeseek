@@ -1,0 +1,90 @@
+/* frontend/public/css/product-detail.css */
+
+.pricing-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 2px solid #e5e7eb; /* border-gray-200 */
+    border-radius: 0.75rem; /* rounded-xl */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.pricing-option:hover {
+    border-color: #93c5fd; /* border-blue-300 */
+    background-color: #eff6ff; /* bg-blue-50 */
+}
+
+.pricing-option.selected {
+    border-color: #2563eb; /* border-blue-600 */
+    background-color: #eff6ff; /* bg-blue-50 */
+    box-shadow: 0 0 0 2px #bfdbfe; /* ring-2 ring-blue-200 */
+}
+
+.pricing-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.custom-radio {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #9ca3af; /* border-gray-400 */
+    border-radius: 9999px; /* rounded-full */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    flex-shrink: 0;
+}
+
+.pricing-option.selected .custom-radio {
+    border-color: #2563eb; /* border-blue-600 */
+    background-color: #2563eb; /* bg-blue-600 */
+}
+
+.custom-radio::after {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: white;
+    border-radius: 9999px;
+    transform: scale(0);
+    transition: transform 0.2s ease-in-out;
+}
+
+.pricing-option.selected .custom-radio::after {
+    transform: scale(1);
+}
+
+.plan-details {
+    margin-left: 0.75rem;
+}
+
+.plan-title {
+    font-weight: 600; /* font-semibold */
+    color: #111827; /* text-gray-900 */
+}
+
+.plan-description {
+    font-size: 0.875rem; /* text-sm */
+    color: #4b5563; /* text-gray-600 */
+}
+
+.plan-price {
+    text-align: right;
+}
+
+.plan-price .price {
+    font-weight: 700; /* font-bold */
+    color: #111827; /* text-gray-900 */
+    font-size: 1.125rem; /* text-lg */
+}
+
+.plan-price .period {
+    font-size: 0.875rem; /* text-sm */
+    color: #4b5563; /* text-gray-600 */
+}

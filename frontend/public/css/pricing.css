@@ -1,0 +1,108 @@
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.pricing-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.pricing-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.pricing-header p {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+.pricing-toggle {
+    margin-top: 1.5rem;
+    display: inline-block;
+    background: #e9ecef;
+    border-radius: 2rem;
+    padding: 0.3rem;
+}
+
+.toggle-btn {
+    border: none;
+    background: transparent;
+    padding: 0.7rem 1.5rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.toggle-btn.active {
+    background: #007bff;
+    color: #fff;
+}
+
+.pricing-table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: center;
+}
+
+.plan-card {
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.plan-card.featured {
+    border: 2px solid #007bff;
+    transform: scale(1.05);
+}
+
+.plan-header h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.plan-price {
+    margin: 2rem 0;
+}
+
+.price-amount {
+    font-size: 3rem;
+    font-weight: bold;
+}
+
+.price-period {
+    color: #6c757d;
+}
+
+.plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0;
+    text-align: left;
+}
+
+.plan-features li {
+    margin-bottom: 1rem;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.faq {
+    margin-top: 4rem;
+    text-align: center;
+}
+
+.faq-item {
+    margin-bottom: 1.5rem;
+    text-align: left;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Included Products - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/public/css/core.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="dashboard-sidebar">
+            <div class="dashboard-sidebar-header">DigiServer</div>
+            <nav class="dashboard-sidebar-nav">
+                <ul class="space-y-2">
+                    <li><a href="/dashboard" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
+                    <li><a href="/dashboard/products" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-box mr-3"></i>My Products</a></li>
+                    <li><a href="/dashboard/licenses" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-key mr-3"></i>My Licenses</a></li>
+                    <li><a href="/dashboard/billing" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-file-invoice-dollar mr-3"></i>Billing</a></li>
+                    <li><a href="/dashboard/profile" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-user-circle mr-3"></i>Profile</a></li>
+                </ul>
+            </nav>
+            <div class="dashboard-sidebar-footer">
+                <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <button class="text-gray-600 mr-4 sm:hidden" id="menu-button">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <a href="/dashboard/products" class="text-blue-600 hover:text-blue-800 mr-4 flex items-center text-sm font-medium">
+                            <i class="fas fa-arrow-left mr-2"></i>Back to My Products
+                        </a>
+                        <h1 class="text-2xl font-bold text-gray-800">All Access Products</h1>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+            <div class="dashboard-content">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-2">Products Included in Your All Access Plan</h2>
+                        <p class="text-gray-600 text-sm">Download any of these premium products at no additional cost.</p>
+                    </div>
+                    
+                    <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Produtos serão inseridos aqui -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/core.js"></script>
+    <script>
+        // Função para truncar texto
+        function truncateText(text, maxLength = 80) {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength).trim() + '...';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = `
+                <div class="col-span-full flex justify-center py-8">
+                    <div class="flex items-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-3"></i>
+                        Loading products...
+                    </div>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/user/all-access-products', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load products.');
+                const data = await response.json();
+
+                grid.innerHTML = '';
+                if (data.products && data.products.length > 0) {
+                    data.products.forEach(product => {
+                        const truncatedDescription = truncateText(product.description || 'No description available');
+                        
+                        // Debug: log do produto e preço
+                        console.log('Product:', product.name, 'Price:', product.price, 'Type:', typeof product.price);
+                        
+                        // Converter price para número e verificar se é gratuito
+                        const productPrice = parseFloat(product.price || 0);
+                        const isFree = productPrice === 0;
+                        const priceDisplay = isFree ? 'Free' : `$${productPrice.toFixed(2)}`;
+                        
+                        const freeBadge = isFree ? 
+                            `<span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full whitespace-nowrap">
+                                Free
+                            </span>` : 
+                            `<span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full whitespace-nowrap">
+                                ${priceDisplay}
+                            </span>`;
+                        
+                        const card = `
+                            <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow duration-200">
+                                <div class="flex items-start justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-900 text-base leading-tight">${product.name}</h3>
+                                    ${freeBadge}
+                                </div>
+                                
+                                <p class="text-gray-600 text-sm mb-4 leading-relaxed">${truncatedDescription}</p>
+                                
+                                <div class="pt-3 border-t border-gray-100">
+                                    <a href="/api/products/${product.id}/download" 
+                                       class="inline-flex items-center justify-center w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                                        <i class="fas fa-download mr-2"></i>
+                                        Download
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        grid.innerHTML += card;
+                    });
+                } else {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <div class="text-gray-400 mb-4">
+                                <i class="fas fa-box-open text-4xl"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No Products Available</h3>
+                            <p class="text-gray-600">No products are currently included in the All Access plan.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <div class="text-red-400 mb-4">
+                            <i class="fas fa-exclamation-triangle text-4xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Products</h3>
+                        <p class="text-gray-600 mb-4">Could not load the included products. Please try again.</p>
+                        <button onclick="location.reload()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
+
