@@ -1,6 +1,6 @@
 // backend/controllers/emailController.js
 const nodemailer = require('nodemailer');
-const { Setting } = require('../models/Index');
+const { Setting } = require('../models/index');
 const logger = require('../config/logger');
 
 // Função para converter dados do Editor.js para HTML

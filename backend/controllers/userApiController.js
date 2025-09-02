@@ -1,4 +1,4 @@
-const { User } = require('../models/Index');
+const { User } = require('../models/index');
 const logger = require('../config/logger');
 
 /**

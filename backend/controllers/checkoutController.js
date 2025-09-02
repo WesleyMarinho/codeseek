@@ -1,4 +1,4 @@
-const { Product, User, Invoice, Subscription, Setting } = require('../models/Index');
+const { Product, User, Invoice, Subscription, Setting } = require('../models/index');
 const logger = require('../config/logger');
 const { initializeChargebee, getChargebeeConfig } = require('../config/chargebee');
 

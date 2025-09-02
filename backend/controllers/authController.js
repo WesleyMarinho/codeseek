@@ -1,6 +1,6 @@
 // backend/controllers/authController.js
 
-const { User } = require('../models/Index');
+const { User } = require('../models/index');
 const logger = require('../config/logger');
 const { Op } = require('sequelize');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('./emailController');

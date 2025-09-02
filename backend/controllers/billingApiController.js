@@ -1,6 +1,6 @@
 // backend/controllers/billingApiController.js
 
-const { Subscription, Invoice } = require('../models/Index');
+const { Subscription, Invoice } = require('../models/index');
 const logger = require('../config/logger');
 
 const billingApiController = {

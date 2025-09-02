@@ -1,4 +1,4 @@
-const { Subscription, User } = require('../models/Index');
+const { Subscription, User } = require('../models/index');
 const logger = require('../config/logger');
 
 // ===============================================================

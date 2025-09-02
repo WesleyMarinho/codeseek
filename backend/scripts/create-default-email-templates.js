@@ -1,5 +1,5 @@
 // Script para criar templates de email padrão no banco de dados
-const { Setting } = require('../models/Index');
+const { Setting } = require('../models/index');
 const logger = require('../config/logger');
 
 // Templates padrão com conteúdo HTML e variáveis

@@ -1,4 +1,4 @@
-const { WebhookLog, User } = require('../models/Index');
+const { WebhookLog, User } = require('../models/index');
 const { Op } = require('sequelize');
 const logger = require('../config/logger');
 const { sendPurchaseEmail, sendPaymentFailedEmail, sendRenewalEmail, sendLicenseActivatedEmail, sendSubscriptionCancelledEmail } = require('./emailController');

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client } = require('pg');
-const { sequelize, syncDatabase } = require('./models/Index'); // Importa o syncDatabase
+const { sequelize, syncDatabase } = require('../models/index'); // Importa o syncDatabase
 const { seedDatabase } = require('./seed-database'); // Importa o seed
 
 async function setupDatabase() {

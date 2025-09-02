@@ -1,4 +1,4 @@
-const { License, Product, User, Subscription, Activation } = require('../models/Index');
+const { License, Product, User, Subscription, Activation } = require('../models/index');
 const logger = require('../config/logger');
 
 const licenseApiController = {

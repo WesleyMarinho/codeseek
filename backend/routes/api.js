@@ -25,7 +25,7 @@ const CheckoutController = require('../controllers/checkoutController');
 // --- Configurações e Modelos ---
 const { upload, settingsUpload, handleUploadError, deleteFile } = require('../config/upload');
 const logger = require('../config/logger');
-const { Product, License } = require('../models/Index');
+const { Product, License } = require('../models/index');
 
 // ===============================================================
 // --- ROTAS PÚBLICAS ---
