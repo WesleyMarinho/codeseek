@@ -1,18 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terms of Use - DigiServer</title>
-    <link rel="stylesheet" href="public/css/styles.css">
-    <link rel="stylesheet" href="public/css/static.css">
+    <title>Terms of Use - CodeSeek</title>
+    <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
+    <link rel="stylesheet" href="/public/css/styles.css">
+    <link rel="stylesheet" href="/public/css/static.css">
+    <script src="/public/js/core.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+    <script src="/public/js/public-layout.js"></script>
 </head>
+
 <body>
     <header>
         <nav>
-            <div class="logo">DigiServer</div>
+            <a href="/" data-brand>
+                <div class="site-logo" data-logo-class="h-8 w-auto object-contain"></div>
+            </a>
             <ul>
-                <li><a href="index.html">Home</a></li>
                 <li><a href="products.html">Products</a></li>
                 <li><a href="about.html">About</a></li>
                 <li><a href="contact.html">Contact</a></li>
@@ -23,24 +30,40 @@
     <main class="container static-page">
         <h1>Terms of Use</h1>
         <p><em>Last updated: August 14, 2025</em></p>
-        
+
         <h2>1. Acceptance of Terms</h2>
-        <p>By accessing and using DigiServer, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using these particular services, you shall be subject to any posted guidelines or rules applicable to such services.</p>
+        <p>By accessing and using <span class="site-name">CodeSeek</span>, you accept and agree to be bound by the
+            terms and provision of this agreement. In addition, when using these particular services, you shall be
+            subject to any posted guidelines or rules applicable to such services.</p>
 
         <h2>2. Use License</h2>
-        <p>The purchase of a product grants you a license to use the product in accordance with the terms specified for that product (e.g., number of allowed domains/IPs). Sharing or reselling license keys is strictly prohibited and will result in the suspension of your account and licenses.</p>
+        <p>The purchase of a product grants you a license to use the product in accordance with the terms specified for
+            that product (e.g., number of allowed domains/IPs). Sharing or reselling license keys is strictly prohibited
+            and will result in the suspension of your account and licenses.</p>
 
         <h2>3. Payments and Subscriptions</h2>
-        <p>Subscriptions are billed on a recurring basis (monthly or annually). You may cancel your subscription at any time. Cancellation will stop future billings, but no refunds will be provided for periods already paid.</p>
-        
+        <p>Subscriptions are billed on a recurring basis (monthly or annually). You may cancel your subscription at any
+            time. Cancellation will stop future billings, but no refunds will be provided for periods already paid.</p>
+
         <h2>4. Limitation of Liability</h2>
-        <p>DigiServer shall not be liable for any direct, indirect, incidental, consequential, or exemplary damages which may be incurred by you, however caused and under any theory of liability. This shall include, but not be limited to, any loss of profit, goodwill or business reputation.</p>
+        <p><span class="site-name">CodeSeek</span> shall not be liable for any direct, indirect, incidental,
+            consequential, or exemplary damages which may be incurred by you, however caused and under any theory of
+            liability. This shall include, but not be limited to, any loss of profit, goodwill or business reputation.
+        </p>
     </main>
 
     <footer>
         <div class="footer-content">
-            <p>&copy; 2025 DigiServer. All rights reserved.</p>
+            <p>&copy; 2025 <span class="site-name">CodeSeek</span>. All rights reserved.</p>
         </div>
     </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof publicLayout !== 'undefined') {
+                publicLayout.init();
+            }
+        });
+    </script>
 </body>
+
 </html>

@@ -21,7 +21,10 @@ async function getChargebeeConfig() {
 
     const config = {};
     settings.forEach(setting => {
-      config[setting.key] = setting.value;
+      // Settings are stored as JSON, commonly { value: string }
+      const raw = setting.value;
+      const normalized = raw && typeof raw === 'object' && 'value' in raw ? raw.value : raw;
+      config[setting.key] = normalized;
     });
 
     // Fallback para variáveis de ambiente se não estiver no banco

@@ -55,7 +55,7 @@ async function getSMTPConfig() {
                 pass: config.smtp_pass
             },
             fromEmail: config.smtp_from_email || config.smtp_user,
-            fromName: config.smtp_from_name || 'DigiServer'
+            fromName: config.smtp_from_name || 'CodeSeek'
         };
     } catch (error) {
         logger.error('Error getting SMTP config:', error);
@@ -102,8 +102,8 @@ function replaceTemplateVariables(template, variables = {}) {
     
     // Variáveis padrão
     const defaultVariables = {
-        siteName: 'DigiServer Pro',
-        supportEmail: 'support@digiserver.com',
+        siteName: 'CodeSeek Pro',
+        supportEmail: 'support@codeseek.com',
         currentYear: new Date().getFullYear()
     };
 

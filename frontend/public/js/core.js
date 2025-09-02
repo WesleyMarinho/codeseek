@@ -1,5 +1,17 @@
 // frontend/public/js/core.js (Versão Final Unificada)
 
+// Ensure logo web component is registered
+(function ensureLogoComponent(){
+    try {
+        if (!customElements.get('app-logo')) {
+            const s = document.createElement('script');
+            s.src = '/public/js/logo.js';
+            s.defer = true;
+            document.head.appendChild(s);
+        }
+    } catch (_) {}
+})();
+
 // Configurações globais
 const API_BASE_URL = '/api';
 const UPLOAD_BASE_URL = '/uploads';

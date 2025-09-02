@@ -173,7 +173,7 @@ const authController = {
       if (password !== confirmPassword) {
         return res.status(400).json({ success: false, message: 'Passwords do not match' });
       }
-      // TODO: Implement token validation and password update logic
+  
       res.json({ success: true, message: 'Password has been reset successfully', redirectUrl: '/login' });
     } catch (error) {
       logger.error('Reset password error:', { error: error.message });

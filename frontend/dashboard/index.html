@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - DigiServer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Dashboard | <span class="site-name">CodeSeek</span></title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/public/css/core.css">
 </head>
@@ -14,7 +14,9 @@
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside id="sidebar" class="dashboard-sidebar">
-            <div class="dashboard-sidebar-header">DigiServer</div>
+            <div class="dashboard-sidebar-header flex items-center space-x-3">
+                <div class="site-logo" data-logo-class="h-8 w-auto object-contain"></div>
+            </div>
             <nav class="dashboard-sidebar-nav">
                 <ul class="space-y-2">
                     <li><a href="/dashboard" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
@@ -101,6 +103,9 @@
         </main>
     </div>
     
+    <script src="/public/js/settings-service.js"></script>
+    <script src="/public/js/logo.js"></script>
+    <script src="/public/js/dashboard-layout.js"></script>
     <script src="/public/js/auth.js"></script>
     <script>
         // Função para carregar dados do dashboard
@@ -203,7 +208,12 @@
         });
 
         // Carregar dados quando a página carregar
-        document.addEventListener('DOMContentLoaded', loadDashboardData);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboardData();
+            if (typeof dashboardLayout !== 'undefined') {
+                dashboardLayout.init();
+            }
+        });
         </script>
 </body>
 </html>

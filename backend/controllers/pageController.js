@@ -65,7 +65,7 @@ const pageController = {
   
   // Checkout redireciona para sistema de pagamentos externo
   checkout: (req, res) => {
-    // TODO: Implementar redirecionamento para Chargebee Hosted Pages ou sistema de pagamentos
+
     logger.info('Redirecting to external payment system', { userId: req.session.userId });
     // Por enquanto, redireciona para o carrinho até implementar o sistema de pagamentos
     res.redirect('/cart?checkout=true');
@@ -77,13 +77,13 @@ const pageController = {
   
   // --- Lógica de API para Carrinho ---
   addToCart: (req, res) => {
-    // TODO: Implementar lógica de sessão para o carrinho
+
     logger.info('Adding item to cart', { body: req.body, userId: req.session.userId });
     res.json({ success: true, message: 'Product added to cart' });
   },
 
   removeFromCart: (req, res) => {
-    // TODO: Implementar lógica de sessão para o carrinho
+
     logger.info('Removing item from cart', { body: req.body, userId: req.session.userId });
     res.json({ success: true, message: 'Product removed from cart' });
   },

@@ -3,17 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage License - DigiServer Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Manage License - <span class="site-name">CodeSeek</span> Dashboard</title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/public/css/core.css">
 </head>
 
 <body class="bg-gray-50 font-sans">
-    <div class="flex h-screen bg-gray-100">
+    <div id="notification-container"></div>
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="w-64 bg-gray-800 text-white flex-col hidden sm:flex">
-            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer</div>
-            <nav class="flex-1 p-4">
+        <aside id="sidebar" class="dashboard-sidebar">
+             <div class="dashboard-sidebar-header flex items-center space-x-3">
+                <div class="site-logo" data-logo-class="h-8 w-auto object-contain"></div>
+            </div>
+            <nav class="dashboard-sidebar-nav">
                 <ul class="space-y-2">
                     <li><a href="/dashboard" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                     <li><a href="/dashboard/products" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-box mr-3"></i>My Products</a></li>
@@ -22,21 +27,23 @@
                     <li><a href="/dashboard/profile" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-user-circle mr-3"></i>Profile</a></li>
                 </ul>
             </nav>
-            <div class="p-4 border-t border-gray-700">
+            <div class="dashboard-sidebar-footer">
                 <a href="#" id="logout-button" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt mr-3"></i>Logout</a>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col">
-            <header class="bg-white shadow-sm border-b border-gray-200 p-4 flex justify-between items-center">
-                <div>
-                    <a href="/dashboard/licenses" class="text-sm text-blue-600 hover:underline flex items-center"><i class="fas fa-arrow-left mr-2"></i>Back to My Licenses</a>
-                    <h1 class="text-2xl font-bold text-gray-800 mt-1">Manage License</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span id="user-greeting" class="font-semibold text-gray-700">Hello!</span>
-                    <img src="https://picsum.photos/seed/avatar/40/40" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-gray-300">
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <a href="/dashboard/licenses" class="text-sm text-blue-600 hover:underline flex items-center"><i class="fas fa-arrow-left mr-2"></i>Back to My Licenses</a>
+                        <h1 class="text-2xl font-bold text-gray-800 mt-1">Manage License</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-greeting" class="font-semibold text-gray-700">Hello!</span>
+                        <img src="https://picsum.photos/seed/avatar/40/40" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-gray-300">
+                    </div>
                 </div>
             </header>
 
@@ -50,7 +57,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">License Key</h3>
-                            <p id="license-key" class="mt-1 text-gray-900 font-mono bg-gray-100 p-2 rounded"></p>
+                            <div class="flex items-center space-x-2">
+                                <p id="license-key" class="mt-1 text-gray-900 font-mono bg-gray-100 p-2 rounded flex-1"></p>
+                                <button class="copy-btn text-gray-400 hover:text-blue-600 transition-colors duration-200 p-2 rounded hover:bg-blue-50 border" title="Copy full license key">
+                                     <i class="fas fa-copy"></i>
+                                 </button>
+                            </div>
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-gray-500">Product</h3>
@@ -93,9 +105,90 @@
         </main>
     </div>
 
-    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+<script src="/public/js/logo.js"></script>
+<script src="/public/js/dashboard-layout.js"></script>
+<script src="/public/js/auth.js"></script>
+<script src="/public/js/core.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize dashboard layout
+            if (typeof dashboardLayout !== 'undefined') {
+                dashboardLayout.init();
+            }
+            
+            // Add event listener for copy button
+            const copyButton = document.querySelector('.copy-btn');
+            if (copyButton) {
+                copyButton.addEventListener('click', function() {
+                    copyCurrentLicenseKey(this);
+                });
+            }
+
+        async function copyCurrentLicenseKey(buttonElement) {
+            try {
+                const licenseKeyElement = document.getElementById('license-key');
+                const licenseKey = licenseKeyElement.textContent.trim();
+                
+                if (!licenseKey || licenseKey === 'Loading...' || licenseKey === 'Not found') {
+                    showNotification('No license key available to copy', 'error');
+                    return;
+                }
+                
+                await navigator.clipboard.writeText(licenseKey);
+                
+                // Visual feedback
+                const icon = buttonElement.querySelector('i');
+                const originalClass = icon.className;
+                
+                // Change to check icon
+                icon.className = 'fas fa-check';
+                buttonElement.classList.remove('text-gray-400', 'hover:text-blue-600');
+                buttonElement.classList.add('text-green-600');
+                buttonElement.title = 'Copied!';
+                
+                // Show notification
+                showNotification('License key copied to clipboard!', 'success');
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    icon.className = originalClass;
+                    buttonElement.classList.remove('text-green-600');
+                    buttonElement.classList.add('text-gray-400', 'hover:text-blue-600');
+                    buttonElement.title = 'Copy full license key';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Failed to copy license key:', err);
+                
+                // Fallback for older browsers
+                const licenseKeyElement = document.getElementById('license-key');
+                const licenseKey = licenseKeyElement.textContent.trim();
+                
+                const textArea = document.createElement('textarea');
+                textArea.value = licenseKey;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                // Visual feedback for fallback
+                const icon = buttonElement.querySelector('i');
+                const originalClass = icon.className;
+                icon.className = 'fas fa-check';
+                buttonElement.classList.remove('text-gray-400', 'hover:text-blue-600');
+                buttonElement.classList.add('text-green-600');
+                
+                showNotification('License key copied to clipboard!', 'success');
+                
+                setTimeout(() => {
+                    icon.className = originalClass;
+                    buttonElement.classList.remove('text-green-600');
+                    buttonElement.classList.add('text-gray-400', 'hover:text-blue-600');
+                }, 2000);
+            }
+        }
+            
             // Lógica para obter ID da licença da URL
             const pathParts = window.location.pathname.split('/');
             const licenseId = pathParts[pathParts.length - 1];
@@ -222,29 +315,37 @@
                     const errorData = await response.json();
                     throw new Error(errorData.message || 'Failed to add domain');
                 }
+                showNotification('Domain activated successfully!', 'success');
                 await loadLicenseDetails(licenseId);
             } catch (error) {
-                alert(`Error adding domain: ${error.message}`);
+                showNotification(`Error: ${error.message}`, 'error');
             }
         }
 
         async function removeActivation(licenseId, activationId) {
-            if (!confirm('Are you sure you want to deactivate this domain?')) {
-                return;
-            }
-            try {
-                const response = await fetch(`/api/license/${licenseId}/activations/${activationId}`, {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to deactivate domain');
+            const activationRow = document.getElementById(`activation-row-${activationId}`);
+            const domain = activationRow.querySelector('td').textContent;
+            
+            showConfirmationModal({
+                title: 'Deactivate Domain',
+                message: `Are you sure you want to deactivate domain "${domain}"? This action cannot be undone.`,
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/api/license/${licenseId}/activations/${activationId}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Failed to deactivate domain');
+                        }
+                        showNotification('Domain deactivated successfully!', 'success');
+                        document.getElementById(`activation-row-${activationId}`).remove();
+                    } catch (error) {
+                        showNotification(`Error: ${error.message}`, 'error');
+                    }
                 }
-                document.getElementById(`activation-row-${activationId}`).remove();
-            } catch (error) {
-                alert(`Error deactivating domain: ${error.message}`);
-            }
+            });
         }
     </script>
 </body>

@@ -152,7 +152,7 @@ const webhookController = {
       
       if (user) {
         // Enviar email de confirmação de compra
-        const productName = payload.subscription?.plan_id || payload.plan?.name || 'DigiServer Pro';
+        const productName = payload.subscription?.plan_id || payload.plan?.name || 'CodeSeek Pro';
         const amount = payload.invoice?.total || payload.amount || 0;
         
         await sendPurchaseEmail(user.email, user.username, productName, amount);
@@ -218,7 +218,7 @@ const webhookController = {
       
       if (user) {
         // Enviar email de cancelamento de assinatura
-        const planName = payload.subscription?.plan_id || payload.plan?.name || 'DigiServer Pro';
+        const planName = payload.subscription?.plan_id || payload.plan?.name || 'CodeSeek Pro';
         
         await sendSubscriptionCancelledEmail(user.email, user.username, planName);
         logger.info('Subscription cancelled email sent', { userId: user.id, email: user.email });
@@ -245,7 +245,7 @@ const webhookController = {
       
       if (user) {
         // Enviar email de renovação
-        const planName = payload.subscription?.plan_id || payload.plan?.name || 'DigiServer Pro';
+        const planName = payload.subscription?.plan_id || payload.plan?.name || 'CodeSeek Pro';
         const nextBillingDate = payload.subscription?.next_billing_at || payload.next_billing_date;
         
         await sendRenewalEmail(user.email, user.username, planName, nextBillingDate);
@@ -274,7 +274,7 @@ const webhookController = {
       if (user) {
         // Enviar email de ativação de licença
         const licenseKey = payload.license?.key || payload.license_key || 'Your License Key';
-        const productName = payload.product?.name || payload.product_name || 'DigiServer Pro';
+        const productName = payload.product?.name || payload.product_name || 'CodeSeek Pro';
         
         await sendLicenseActivatedEmail(user.email, user.username, licenseKey, productName);
         logger.info('License activated email sent', { userId: user.id, email: user.email });

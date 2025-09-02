@@ -1,7 +1,7 @@
 {
-  "name": "digiserver-backend",
+  "name": "codeseek-backend",
   "version": "1.0.0",
-  "description": "Backend para DigiServer V2 - Sistema de vendas digitais",
+  "description": "Backend para CodeSeek - Sistema de vendas digitais",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -20,7 +20,7 @@
     "redis",
     "digital-sales"
   ],
-  "author": "DigiServer Team",
+  "author": "CodeSeek Team",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {

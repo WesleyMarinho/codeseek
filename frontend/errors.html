@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale-1.0">
-    <title>Error - DigiServer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Error - CodeSeek</title>
+    <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
+    <script src="/public/js/core.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+    <script src="/public/js/public-layout.js"></script>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-50 font-sans">
@@ -43,7 +47,7 @@
             const title = errorTitles[code] || 'Error';
             
             // Atualiza o conteúdo da página com os dados da URL
-            document.title = `${code} - ${title} - DigiServer`;
+            document.title = `${code} - ${title} - ` + (window.siteName || 'CodeSeek');
             document.getElementById('error-code').textContent = code;
             document.getElementById('error-title').textContent = title;
             document.getElementById('error-message').textContent = message;

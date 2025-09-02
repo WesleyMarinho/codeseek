@@ -755,11 +755,11 @@ async function seedDatabase() {
     
     await Setting.bulkCreate([
       // Site Settings
-      { key: 'site_name', value: { value: 'DigiServer Pro' } },
+      { key: 'site_name', value: { value: 'CodeSeek' } },
       { key: 'site_description', value: { value: 'Professional Digital Marketplace for Software, Games, and Educational Content' } },
-      { key: 'site_logo', value: { value: '/public/images/logo.png' } },
+      { key: 'site_logo', value: { value: '/public/images/logo.svg' } },
       { key: 'site_favicon', value: { value: '/public/images/favicon.ico' } },
-      { key: 'site_footer_text', value: { value: '© 2025 DigiServer Pro. All rights reserved.' } },
+      { key: 'site_footer_text', value: { value: '© 2025 CodeSeek. All rights reserved.' } },
       { key: 'site_maintenance_mode', value: { value: false } },
       { key: 'site_maintenance_message', value: { value: 'We are currently performing scheduled maintenance. Please check back soon!' } },
 
@@ -776,11 +776,11 @@ async function seedDatabase() {
       { key: 'smtp_secure', value: { value: false } },
       { key: 'smtp_user', value: { value: process.env.SMTP_USER || '' } },
       { key: 'smtp_pass', value: { value: process.env.SMTP_PASS || '' } },
-      { key: 'smtp_from_name', value: { value: 'DigiServer Pro' } },
-      { key: 'smtp_from_email', value: { value: 'noreply@digiserver.com' } },
+      { key: 'smtp_from_name', value: { value: 'CodeSeek Pro' } },
+      { key: 'smtp_from_email', value: { value: 'noreply@codeseek.com' } },
 
       // Email Templates - Purchase
-      { key: 'email_purchase_subject', value: { value: '🎉 Welcome to DigiServer Pro - Your Purchase is Complete!' } },
+      { key: 'email_purchase_subject', value: { value: '🎉 Welcome to CodeSeek Pro - Your Purchase is Complete!' } },
       { key: 'email_purchase_body', value: { 
         value: 
           `<h2>Thank you for your purchase!</h2>
@@ -795,11 +795,11 @@ async function seedDatabase() {
           </div>
           <p>You can download your product and manage your licenses at: <a href="\{{dashboardUrl\}}">Your Dashboard</a></p>
           <p>If you need any assistance, feel free to contact our support team.</p>
-          <p>Best regards,<br>The DigiServer Pro Team</p>` 
+          <p>Best regards,<br>The CodeSeek Pro Team</p>` 
       }},
 
       // Email Templates - Renewal
-      { key: 'email_renewal_subject', value: { value: '🔄 Your DigiServer Pro Subscription Has Been Renewed' } },
+      { key: 'email_renewal_subject', value: { value: '🔄 Your CodeSeek Pro Subscription Has Been Renewed' } },
       { key: 'email_renewal_body', value: { 
         value: 
           `<h2>Subscription Renewed Successfully!</h2>
@@ -813,16 +813,16 @@ async function seedDatabase() {
             <p><strong>Billing Period:</strong> \{{currentPeriodStart\}} - \{{currentPeriodEnd\}}</p>
           </div>
           <p>Continue enjoying unlimited access to our premium products at: <a href="\{{dashboardUrl\}}">Your Dashboard</a></p>
-          <p>Best regards,<br>The DigiServer Pro Team</p>`
+          <p>Best regards,<br>The CodeSeek Pro Team</p>`
       }},
 
       // Email Templates - Welcome
-      { key: 'email_welcome_subject', value: { value: '👋 Welcome to DigiServer Pro!' } },
+      { key: 'email_welcome_subject', value: { value: '👋 Welcome to CodeSeek Pro!' } },
       { key: 'email_welcome_body', value: { 
         value: 
-          `<h2>Welcome to DigiServer Pro!</h2>
+          `<h2>Welcome to CodeSeek Pro!</h2>
           <p>Hi \{{username\}},</p>
-          <p>Thank you for joining DigiServer Pro - your premium digital marketplace!</p>
+          <p>Thank you for joining CodeSeek Pro - your premium digital marketplace!</p>
           <div style="background: #f0f7ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3>🚀 Get Started:</h3>
             <ul>
@@ -832,7 +832,7 @@ async function seedDatabase() {
             </ul>
           </div>
           <p>If you have any questions, our support team is here to help!</p>
-          <p>Best regards,<br>The DigiServer Pro Team</p>`
+          <p>Best regards,<br>The CodeSeek Pro Team</p>`
       }},
 
       // Email Templates - License Expiry Warning

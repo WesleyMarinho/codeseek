@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - DigiServer</title>
-    <link rel="stylesheet" href="public/css/styles.css">
-    <link rel="stylesheet" href="public/css/static.css">
+    <title>Privacy Policy - CodeSeek</title>
+    <link rel="icon" type="image/x-icon" href="/public/images/favicon.ico">
+    <link rel="stylesheet" href="/public/css/styles.css">
+    <link rel="stylesheet" href="/public/css/static.css">
+    <script src="/public/js/core.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+    <script src="/public/js/public-layout.js"></script>
 </head>
 <body>
     <header>
         <nav>
-            <div class="logo">DigiServer</div>
+            <a href="/" data-brand><div class="site-logo" data-logo-class="h-8 w-auto object-contain"></div></a>
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="products.html">Products</a></li>
@@ -39,8 +43,15 @@
 
     <footer>
         <div class="footer-content">
-            <p>&copy; 2025 DigiServer. All rights reserved.</p>
+            <p>&copy; 2025 <span class="site-name">CodeSeek</span>. All rights reserved.</p>
         </div>
     </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof publicLayout !== 'undefined') {
+                publicLayout.init();
+            }
+        });
+    </script>
 </body>
 </html>

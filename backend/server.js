@@ -50,10 +50,11 @@ app.use(
           "'unsafe-inline'"
         ],
         fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "https://picsum.photos", "https://fastly.picsum.photos", "/uploads"],
+        imgSrc: ["'self'", "data:", "https://picsum.photos", "https://fastly.picsum.photos"],
         scriptSrcAttr: [],
         connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*"],
-        objectSrc: ["'none'"]
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: null // Disable upgrade-insecure-requests for development
       },
     }
   })
@@ -163,7 +164,11 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await testConnection();
-    await syncDatabase();
+    // Only sync schema automatically if explicitly enabled (default true in development)
+    const shouldSync = process.env.DB_SYNC !== 'false';
+    if (shouldSync) {
+      await syncDatabase();
+    }
     await redisClient.connect();
     
     scheduler.init();

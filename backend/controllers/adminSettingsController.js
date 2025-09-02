@@ -23,8 +23,26 @@ exports.getSettings = async (req, res) => {
 // PUT /api/admin/settings
 exports.updateSettings = async (req, res) => {
     const settingsToUpdate = req.body;
+    const uploadedFiles = req.files;
 
     try {
+        // Processar uploads de arquivos (logo e favicon)
+        if (uploadedFiles) {
+            if (uploadedFiles.logo && uploadedFiles.logo[0]) {
+                const logoFile = uploadedFiles.logo[0];
+                const logoPath = `/uploads/settings/${logoFile.filename}`;
+                settingsToUpdate.site_logo = logoPath;
+                logger.info('Logo uploaded:', { filename: logoFile.filename, path: logoPath });
+            }
+            
+            if (uploadedFiles.favicon && uploadedFiles.favicon[0]) {
+                const faviconFile = uploadedFiles.favicon[0];
+                const faviconPath = `/uploads/settings/${faviconFile.filename}`;
+                settingsToUpdate.site_favicon = faviconPath;
+                logger.info('Favicon uploaded:', { filename: faviconFile.filename, path: faviconPath });
+            }
+        }
+
         const promises = Object.entries(settingsToUpdate).map(([key, value]) => {
             // The value from the form is a simple string, but our model expects a JSON object.
             // We wrap it in an object like { value: ... } to match the structure.
@@ -33,11 +51,17 @@ exports.updateSettings = async (req, res) => {
 
         await Promise.all(promises);
         
-        logger.info('Settings updated successfully by user:', { userId: req.session.userId });
-        res.json({ message: 'Settings updated successfully!' });
+        logger.info('Settings updated successfully by user:', { userId: req.session.userId, files: uploadedFiles ? Object.keys(uploadedFiles) : [] });
+        res.json({ 
+            message: 'Settings updated successfully!',
+            uploadedFiles: uploadedFiles ? {
+                logo: uploadedFiles.logo ? uploadedFiles.logo[0].filename : null,
+                favicon: uploadedFiles.favicon ? uploadedFiles.favicon[0].filename : null
+            } : null
+        });
 
     } catch (error) {
-        logger.error('Error updating settings:', { message: error.message, stack: error.stack, body: req.body });
+        logger.error('Error updating settings:', { message: error.message, stack: error.stack, body: req.body, files: uploadedFiles });
         res.status(500).json({ message: 'Error updating settings' });
     }
 };
@@ -67,14 +91,14 @@ exports.testSMTPConnection = async (req, res) => {
 
         // Determinar o remetente
         const fromEmail = smtp_from_email || smtp_user;
-        const fromName = smtp_from_name || 'DigiServer';
+        const fromName = smtp_from_name || 'CodeSeek';
         const fromAddress = fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
 
         // Enviar email de teste
         const testMailOptions = {
             from: fromAddress,
             to: test_email,
-            subject: 'DigiServer Pro - SMTP Test',
+            subject: 'CodeSeek Pro - SMTP Test',
             html: `
                 <h2>SMTP Configuration Test</h2>
                 <p>This is a test email to verify your SMTP configuration.</p>
@@ -83,7 +107,7 @@ exports.testSMTPConnection = async (req, res) => {
                 <p><strong>From:</strong> ${fromAddress}</p>
                 <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
                 <hr>
-                <p><em>DigiServer Pro Email System</em></p>
+                <p><em>CodeSeek Pro Email System</em></p>
             `
         };
 
@@ -117,6 +141,55 @@ exports.testSMTPConnection = async (req, res) => {
         }
         
         res.status(500).json({ message: errorMessage });
+    }
+};
+
+// GET /api/public/settings - Configurações públicas do site
+exports.getPublicSettings = async (req, res) => {
+    try {
+        const publicKeys = [
+            'site_name',
+            'site_logo',
+            'site_favicon',
+            'site_description'
+        ];
+
+        const settings = await Setting.findAll({
+            where: {
+                key: publicKeys
+            }
+        });
+
+        const publicSettings = settings.reduce((acc, setting) => {
+            acc[setting.key] = setting.value;
+            return acc;
+        }, {});
+
+        // Garantir valores padrão se não existirem
+        const defaults = {
+            site_name: { value: 'CodeSeek Pro' },
+            site_logo: { value: '/public/images/logo.svg' },
+            site_favicon: { value: '/public/images/favicon.ico' },
+            site_description: { value: 'Professional Digital Marketplace' }
+        };
+
+        Object.keys(defaults).forEach(key => {
+            if (!publicSettings[key]) {
+                publicSettings[key] = defaults[key];
+            }
+        });
+
+        res.json({
+            success: true,
+            settings: publicSettings
+        });
+
+    } catch (error) {
+        logger.error('Error fetching public settings:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching public settings' 
+        });
     }
 };
 
@@ -325,13 +398,13 @@ exports.sendTestEmailTemplate = async (req, res) => {
         const testData = {
             userName: 'João Silva',
             userEmail: testEmail,
-            productName: 'DigiServer Pro',
+            productName: 'CodeSeek Pro',
             planName: 'Premium Plan',
             amount: 'R$ 99,90',
             renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
             resetLink: 'https://example.com/reset-password?token=test123',
             licenseKey: 'DIGI-TEST-1234-5678',
-            supportEmail: 'support@digiserver.com'
+            supportEmail: 'support@codeseek.com'
         };
 
         // Usar a função sendTestEmailInternal do emailController
@@ -388,7 +461,7 @@ exports.testSMTPOnly = async (req, res) => {
         const testMailOptions = {
             from: smtpConfig.smtp_user,
             to: smtpConfig.smtp_test_email,
-            subject: 'DigiServer Pro - SMTP Connection Test',
+            subject: 'CodeSeek Pro - SMTP Connection Test',
             html: `
                 <h2>SMTP Connection Test</h2>
                 <p>This is a test email to verify your SMTP configuration.</p>
@@ -396,7 +469,7 @@ exports.testSMTPOnly = async (req, res) => {
                 <p><strong>User:</strong> ${smtpConfig.smtp_user}</p>
                 <p><strong>Time:</strong> ${new Date().toLocaleString('pt-BR')}</p>
                 <hr>
-                <p><em>DigiServer Pro Email System</em></p>
+                <p><em>CodeSeek Pro Email System</em></p>
             `
         };
 

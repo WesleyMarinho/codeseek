@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DigiServer - Premium Digital Products</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>CodeSeek - Premium Digital Products</title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,14 +21,10 @@
     <header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <a href="/" class="flex items-center space-x-2">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-server text-white text-sm"></i>
-                    </div>
-                    <span class="text-xl font-bold text-gray-800">DigiServer</span>
+                <a href="/" data-brand class="flex items-center space-x-2">
+                    <div class="site-logo" data-logo-class="h-8 w-auto object-contain"></div>
                 </a>
                 <nav class="hidden md:flex items-center space-x-8">
-                    <a href="/" class="text-gray-600 hover:text-blue-600 font-medium">Home</a>
                     <a href="/products" class="text-blue-600 font-semibold">Products</a>
                     <a href="/product/1" class="text-gray-600 hover:text-blue-600 font-medium">All Access Pass</a>
                 </nav>
@@ -84,7 +80,8 @@
                     collection of high-quality products with the All Access Pass.</p>
                 <div class="flex justify-center items-center gap-4">
                     <a href="/product/1"
-                        class="bg-blue-600 text-white font-semibold px-8 py-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">Get All Access</a>
+                        class="bg-blue-600 text-white font-semibold px-8 py-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">Get
+                        All Access</a>
                     <a href="/products"
                         class="bg-gray-200 text-gray-800 font-semibold px-8 py-4 rounded-lg hover:bg-gray-300 transition-transform transform hover:scale-105">Browse
                         Products</a>
@@ -154,7 +151,7 @@
         <div class="container max-w-7xl mx-auto px-6 py-16">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
-                    <h3 class="text-xl font-bold mb-4">DigiServer</h3>
+                    <h3 class="site-name text-xl font-bold mb-4">CodeSeek</h3>
                     <p class="text-gray-400 text-sm">Empowering creators with high-quality digital tools.</p>
                 </div>
                 <div>
@@ -170,7 +167,7 @@
                 </div>
             </div>
             <div class="mt-12 border-t border-gray-700 pt-6 text-center text-gray-500 text-sm">
-                <p>&copy; 2025 DigiServer. All rights reserved.</p>
+                <p>&copy; 2025 <span class="site-name">CodeSeek</span>. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -178,8 +175,13 @@
     <script src="/public/js/core.js"></script>
     <script src="/public/js/cart.js"></script>
     <script src="/public/js/homepage.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+    <script src="/public/js/public-layout.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize public layout
+            publicLayout.init();
+
             document.getElementById('mobile-menu-button')?.addEventListener('click', () => {
                 document.getElementById('mobile-menu')?.classList.toggle('hidden');
             });

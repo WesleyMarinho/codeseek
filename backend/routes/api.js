@@ -2,6 +2,8 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
+const { sequelize } = require('../config/database');
+const redisClient = require('../config/redis');
 
 // --- Controladores ---
 const licenseApiController = require('../controllers/licenseApiController');
@@ -21,7 +23,7 @@ const CartController = require('../controllers/cartController');
 const CheckoutController = require('../controllers/checkoutController');
 
 // --- Configurações e Modelos ---
-const { upload, handleUploadError, deleteFile } = require('../config/upload');
+const { upload, settingsUpload, handleUploadError, deleteFile } = require('../config/upload');
 const logger = require('../config/logger');
 const { Product, License } = require('../models');
 
@@ -33,7 +35,33 @@ router.get('/public/products', publicController.getPublicProducts);
 router.get('/public/products/:id', publicController.getPublicProduct);
 router.get('/public/categories', publicController.getPublicCategories);
 router.get('/public/all-access', publicController.getAllAccessInfo);
+router.get('/public/settings', adminSettingsController.getPublicSettings);
 router.post('/webhooks/:provider', webhookController.handleWebhook);
+
+// Saúde da API / Infra
+router.get('/health', async (req, res) => {
+  const result = { api: 'ok', db: 'unknown', redis: 'unknown' };
+  try {
+    await sequelize.authenticate();
+    result.db = 'ok';
+  } catch (e) {
+    result.db = 'error';
+  }
+  try {
+    // For node-redis v4, if connected, ping works via legacy client or direct
+    if (redisClient?.isOpen || redisClient?.connected) {
+      result.redis = 'ok';
+    } else {
+      // try connecting quickly without altering global state heavily
+      await redisClient.connect().catch(() => {});
+      result.redis = (redisClient?.isOpen || redisClient?.connected) ? 'ok' : 'error';
+    }
+  } catch (e) {
+    result.redis = 'error';
+  }
+  const status = result.db === 'ok' && result.redis === 'ok' ? 200 : 503;
+  return res.status(status).json(result);
+});
 
 // ===============================================================
 // --- ROTAS DE UPLOAD E CARRINHO (Sessão) ---
@@ -177,7 +205,11 @@ adminRouter.put('/users/:id/status', adminApiController.updateUserStatus);
 
 // Configurações
 adminRouter.get('/settings', adminSettingsController.getSettings); 
-adminRouter.put('/settings', adminSettingsController.updateSettings);
+const settingsUploadFields = settingsUpload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'favicon', maxCount: 1 }
+]);
+adminRouter.put('/settings', settingsUploadFields, handleUploadError, adminSettingsController.updateSettings);
 
 // Configurações SMTP
 adminRouter.get('/settings/smtp', adminSettingsController.getSMTPSettings);

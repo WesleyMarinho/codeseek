@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Renderiza o conteúdo principal do produto
     const renderProduct = () => {
-        document.title = `${productData.name} - DigiServer`;
+        document.title = `${productData.name} - ${window.siteName || 'CodeSeek'}`;
         document.getElementById('breadcrumb-product').textContent = productData.name;
 
         // Renderiza a galeria de imagens (com fallback)

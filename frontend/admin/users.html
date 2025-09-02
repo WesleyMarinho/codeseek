@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users - DigiServer Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Manage Users - CodeSeek Admin</title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/public/css/core.css">
 </head>
@@ -14,7 +14,7 @@
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="w-64 bg-gray-800 text-white flex flex-col">
-            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <div class="sidebar-brand text-2xl font-bold p-5 bg-gray-900"></div>
             <nav class="flex-1 p-4">
                 <ul>
                     <li class="mb-2"><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
@@ -68,10 +68,13 @@
     </div>
     
     <script src="/public/js/auth.js"></script>
-    <!-- 3. INCLUIR O NOVO JS GLOBAL -->
-    <script src="/public/js/core.js"></script>
+<script src="/public/js/logo.js"></script>
+<script src="/public/js/settings-service.js"></script>
+<script src="/public/js/admin-layout.js"></script>
+     <script src="/public/js/core.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            adminLayout.init();
             loadUsers();
 
             document.getElementById('add-user-btn').addEventListener('click', () => {
@@ -308,3 +311,8 @@
     </script> 
 </body>
 </html>
+<script>
+    window.settingsService = new SettingsService();
+    const adminLayout = new AdminLayout();
+    adminLayout.initialize();
+</script>

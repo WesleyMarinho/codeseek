@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - DigiServer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Admin - CodeSeek</title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/public/css/core.css">
+    <script src="/public/js/logo.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+    <script src="/public/js/admin-layout.js"></script>
 </head>
 <body class="h-full">
     <div id="notification-container"></div>
@@ -14,7 +17,7 @@
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="w-64 bg-gray-800 text-white flex flex-col">
-            <div class="text-2xl font-bold p-5 bg-gray-900">DigiServer Admin</div>
+            <div class="text-2xl font-bold p-5 bg-gray-900 sidebar-brand"></div>
             <nav class="flex-1 p-4">
                 <ul>
                     <li class="mb-2"><a href="/admin" class="flex items-center p-3 bg-gray-700 rounded-md text-white font-semibold"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
@@ -105,6 +108,9 @@
     <script src="/public/js/auth.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // Inicializa o layout administrativo
+            await window.adminLayout.initialize();
+            
             try {
                 const profileRes = await fetch('/api/user/profile', { credentials: 'include' });
                 if (profileRes.ok) {
@@ -173,3 +179,10 @@
 </body>
 </html>
 </html>
+<script>
+    window.settingsService = new SettingsService();
+    const adminLayout = new AdminLayout();
+    adminLayout.initialize();
+    // Optional: update user info in header when available
+    adminLayout.updateUserInfo && adminLayout.updateUserInfo();
+</script>

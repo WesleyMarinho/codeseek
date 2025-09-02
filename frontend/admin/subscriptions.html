@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Subscriptions - DigiServer Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Manage Subscriptions - CodeSeek Admin</title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/public/css/core.css">
     <link rel="stylesheet" href="/public/css/dashboard.css">
@@ -18,7 +18,7 @@
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="w-64 bg-gray-800 text-white flex flex-col h-full">
-            <div class="text-2xl font-bold p-5 bg-gray-900 flex-shrink-0">DigiServer Admin</div>
+            <div class="sidebar-brand text-2xl font-bold p-5 bg-gray-900 flex-shrink-0"></div>
             <nav class="flex-1 p-4 overflow-y-auto">
                 <ul>
                     <li class="mb-2"><a href="/admin" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i
@@ -172,11 +172,19 @@
 
     <!-- Scripts -->
     <script src="../public/js/core.js"></script>
-    <script src="/public/js/auth.js"></script>
+<script src="/public/js/logo.js"></script>
+<script src="/public/js/settings-service.js"></script>
+<script src="/public/js/admin-layout.js"></script>
+<script src="/public/js/auth.js"></script>
     <script>
         // Estado da aplicação
         let subscriptions = [];
         let users = [];
+
+        // Inicializar layout administrativo
+        document.addEventListener('DOMContentLoaded', () => {
+            adminLayout.init();
+        });
 
         // ===============================================================
         // --- CARREGAMENTO DE DADOS ---
@@ -569,3 +577,8 @@
 </body>
 
 </html>
+<script>
+    window.settingsService = new SettingsService();
+    const adminLayout = new AdminLayout();
+    adminLayout.initialize();
+</script>

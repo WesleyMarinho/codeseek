@@ -2,7 +2,6 @@ require('dotenv').config();
 const { Client } = require('pg');
 const { sequelize, syncDatabase } = require('./models'); // Importa o syncDatabase
 const { seedDatabase } = require('./seed-database'); // Importa o seed
-const MigrationManager = require('./migrations/migration-manager');
 
 async function setupDatabase() {
   const dbName = process.env.DB_NAME;
@@ -36,13 +35,7 @@ async function setupDatabase() {
     await syncDatabase(true); 
     console.log('✅ All tables dropped and recreated successfully!');
 
-    // 3. Executar migrações para garantir que o schema está atualizado
-    console.log('🔄 Running database migrations...');
-    const migrationManager = new MigrationManager();
-    await migrationManager.runPendingMigrations();
-    console.log('✅ Migrations completed successfully!');
-
-    // 4. Popular o banco de dados recém-criado
+    // 3. Popular o banco de dados recém-criado
     console.log('🌱 Seeding the database...');
     await seedDatabase();
     console.log('✅ Database seeded successfully!');

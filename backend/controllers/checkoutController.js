@@ -292,19 +292,20 @@ class CheckoutController {
             }
 
             // Buscar configurações de preços
-            const monthlyPriceSetting = await Setting.findByPk('all_access_monthly_price');
-            const yearlyPriceSetting = await Setting.findByPk('all_access_yearly_price');
+            const monthlyPriceSetting = await Setting.findOne({ where: { key: 'all_access_monthly_price' } });
+            const yearlyPriceSetting = await Setting.findOne({ where: { key: 'all_access_yearly_price' } });
 
-            const monthlyPrice = monthlyPriceSetting ? parseFloat(monthlyPriceSetting.value) : 497;
-            const yearlyPrice = yearlyPriceSetting ? parseFloat(yearlyPriceSetting.value) : 4970;
+            const monthlyPrice = monthlyPriceSetting ? parseFloat((monthlyPriceSetting.value && monthlyPriceSetting.value.value) || monthlyPriceSetting.value) : 497;
+            const yearlyPrice = yearlyPriceSetting ? parseFloat((yearlyPriceSetting.value && yearlyPriceSetting.value.value) || yearlyPriceSetting.value) : 4970;
 
             const price = billingPeriod === 'yearly' ? yearlyPrice : monthlyPrice;
             const interval = billingPeriod === 'yearly' ? 'year' : 'month';
 
-            // Criar ou encontrar customer no Stripe
-            let stripeCustomer;
-            if (user.stripeCustomerId) {
-                stripeCustomer = await stripe.customers.retrieve(user.stripeCustomerId);
+            // Create or retrieve Chargebee customer
+            let chargebeeCustomer;
+            if (user.chargebeeCustomerId) {
+                const customerResult = await chargebee.customer.retrieve(user.chargebeeCustomerId).request();
+                chargebeeCustomer = customerResult.customer;
             } else {
                 const customerResult = await chargebee.customer.create({
                     email: user.email,
@@ -312,7 +313,6 @@ class CheckoutController {
                     id: `user_${user.id}`
                 }).request();
                 chargebeeCustomer = customerResult.customer;
-
                 await user.update({ chargebeeCustomerId: chargebeeCustomer.id });
             }
 
@@ -353,7 +353,7 @@ class CheckoutController {
     // Verificar status da hosted page
     static async verifySession(req, res) {
         try {
-            const { hostedPageId } = req.params;
+            const hostedPageId = req.params.hostedPageId || req.params.sessionId;
             
             // Inicializar Chargebee com configurações do banco
             const chargebee = await initializeChargebee();

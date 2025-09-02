@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Included Products - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Included Products - Dashboard | <span class="site-name">CodeSeek</span></title>
+    <link rel="stylesheet" href="/public/css/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/public/css/core.css">
 </head>
@@ -13,7 +13,9 @@
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside id="sidebar" class="dashboard-sidebar">
-            <div class="dashboard-sidebar-header">DigiServer</div>
+             <div class="dashboard-sidebar-header flex items-center space-x-3">
+                <div class="site-logo" data-logo-class="h-8 w-auto object-contain"></div>
+            </div>
             <nav class="dashboard-sidebar-nav">
                 <ul class="space-y-2">
                     <li><a href="/dashboard" class="flex items-center p-3 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
@@ -60,7 +62,10 @@
         </main>
     </div>
 
-    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/settings-service.js"></script>
+<script src="/public/js/logo.js"></script>
+<script src="/public/js/dashboard-layout.js"></script>
+<script src="/public/js/auth.js"></script>
     <script src="/public/js/core.js"></script>
     <script>
         // Função para truncar texto
@@ -70,6 +75,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // Inicializar layout do dashboard
+            if (typeof dashboardLayout !== 'undefined') {
+                dashboardLayout.init();
+            }
+            
             const grid = document.getElementById('products-grid');
             grid.innerHTML = `
                 <div class="col-span-full flex justify-center py-8">
@@ -124,6 +134,14 @@
                                 </div>
                             </div>
                         `;
+                
+                // Add event listener for retry button
+                const retryButton = document.getElementById('retry-button');
+                if (retryButton) {
+                    retryButton.addEventListener('click', function() {
+                        location.reload();
+                    });
+                }
                         grid.innerHTML += card;
                     });
                 } else {
@@ -146,7 +164,7 @@
                         </div>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Products</h3>
                         <p class="text-gray-600 mb-4">Could not load the included products. Please try again.</p>
-                        <button onclick="location.reload()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                        <button id="retry-button" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
                             Try Again
                         </button>
                     </div>

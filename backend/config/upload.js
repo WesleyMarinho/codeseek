@@ -187,8 +187,57 @@ const organizeMediaInfo = (files) => {
   return mediaFiles;
 };
 
+// Configuração específica para uploads de configurações (logo e favicon)
+const settingsStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../uploads/settings');
+    
+    // Cria o diretório se não existir
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    // Nome específico baseado no campo
+    let filename;
+    if (file.fieldname === 'logo') {
+      filename = `logo_${Date.now()}${path.extname(file.originalname)}`;
+    } else if (file.fieldname === 'favicon') {
+      filename = `favicon_${Date.now()}${path.extname(file.originalname)}`;
+    } else {
+      filename = `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`;
+    }
+    
+    cb(null, filename);
+  }
+});
+
+// Filtro específico para imagens de configurações
+const settingsFileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de arquivo não suportado. Use apenas imagens (JPEG, PNG, GIF, WebP, SVG).'), false);
+  }
+};
+
+// Upload específico para configurações
+const settingsUpload = multer({
+  storage: settingsStorage,
+  fileFilter: settingsFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB máximo para logo/favicon
+    files: 2 // Máximo 2 arquivos (logo + favicon)
+  }
+});
+
 module.exports = {
   upload,
+  settingsUpload,
   handleUploadError,
   deleteFile,
   organizeMediaInfo

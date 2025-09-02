@@ -15,11 +15,11 @@ const licenseApiController = {
       const license = await License.findOne({ where: { key } });
 
       if (!license) {
-        return res.status(404).json({ success: false, message: 'License not found', status: 'invalid' });
-      }
+            return res.status(404).json({ success: false, message: 'Licença inválida - CodeSeek', status: 'invalid' });
+        }
       
       // Implemente sua lógica de validação completa aqui
-      res.json({ success: true, message: "License is valid", status: license.status });
+      res.json({ success: true, message: "Licença válida - CodeSeek", status: license.status });
 
     } catch (error) {
       logger.error('Error verifying license:', { error: error.message, key: req.params.key });

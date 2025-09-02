@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DigiServer frontend loaded.");
+    console.log("CodeSeek frontend loaded.");
 
     const toggleButtons = document.querySelectorAll('.pricing-toggle .toggle-btn');
     const priceDisplay = document.querySelector('.all-access-highlight .price-display');
