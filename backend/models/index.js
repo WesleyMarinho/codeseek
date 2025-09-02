@@ -1,22 +1,60 @@
-// backend/models/index.js
-
+// backend/models/Index.js
+const { Sequelize } = require('sequelize');
 const { sequelize } = require('../config/database');
 const logger = require('../config/logger');
 
-// --- Carregar e Inicializar todos os Modelos ---
-// Este padrão garante que todos os modelos sejam inicializados corretamente com a mesma instância do Sequelize.
-const User = require('./User')(sequelize);
-const Category = require('./Category')(sequelize);
-const Product = require('./Product')(sequelize);
-const License = require('./License')(sequelize);
-const Subscription = require('./Subscription')(sequelize);
-const Activation = require('./Activation')(sequelize);
-const Invoice = require('./Invoice')(sequelize);
-const WebhookLog = require('./WebhookLog')(sequelize);
-const Setting = require('./Setting')(sequelize);
+// Import models
+const User = require('./User')(sequelize, Sequelize.DataTypes);
+const Category = require('./Category')(sequelize, Sequelize.DataTypes);
+const Product = require('./Product')(sequelize, Sequelize.DataTypes);
+const License = require('./License')(sequelize, Sequelize.DataTypes);
+const Subscription = require('./Subscription')(sequelize, Sequelize.DataTypes);
+const Activation = require('./Activation')(sequelize, Sequelize.DataTypes);
+const Invoice = require('./Invoice')(sequelize, Sequelize.DataTypes);
+const WebhookLog = require('./WebhookLog')(sequelize, Sequelize.DataTypes);
+const Setting = require('./Setting')(sequelize, Sequelize.DataTypes);
 
-const db = {
+// Define associations
+// User associations
+User.hasMany(License, { foreignKey: 'userId', as: 'licenses' });
+User.hasMany(Subscription, { foreignKey: 'userId', as: 'subscriptions' });
+User.hasMany(Invoice, { foreignKey: 'userId', as: 'invoices' });
+
+// Category associations
+Category.hasMany(Product, { foreignKey: 'categoryId', as: 'products' });
+
+// Product associations
+Product.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
+Product.hasMany(License, { foreignKey: 'productId', as: 'licenses' });
+
+// License associations
+License.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+License.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+License.hasMany(Activation, { foreignKey: 'licenseId', as: 'activations' });
+
+// Subscription associations
+Subscription.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// Activation associations
+Activation.belongsTo(License, { foreignKey: 'licenseId', as: 'license' });
+
+// Invoice associations
+Invoice.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// Sync database function
+const syncDatabase = async (force = false) => {
+  try {
+    await sequelize.sync({ force });
+    logger.info(`Database synchronized ${force ? '(forced)' : '(safe)'}`);
+  } catch (error) {
+    logger.error('Database synchronization failed:', error);
+    throw error;
+  }
+};
+
+module.exports = {
   sequelize,
+  Sequelize,
   User,
   Category,
   Product,
@@ -25,57 +63,6 @@ const db = {
   Activation,
   Invoice,
   WebhookLog,
-  Setting
+  Setting,
+  syncDatabase
 };
-
-// --- Definir as Associações ---
-// User
-User.hasMany(License, { foreignKey: 'userId', as: 'licenses' });
-User.hasMany(Subscription, { foreignKey: 'userId', as: 'subscriptions' });
-User.hasMany(Invoice, { foreignKey: 'userId', as: 'invoices' });
-
-// Category
-Category.hasMany(Product, { foreignKey: 'categoryId', as: 'products' });
-
-// Product
-Product.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
-Product.hasMany(License, { foreignKey: 'productId', as: 'licenses' });
-
-// License
-License.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-License.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
-// Uma licença pode ter muitas ativações.
-License.hasMany(Activation, {
-  foreignKey: 'licenseId',
-  as: 'activations',
-  onDelete: 'CASCADE'
-});
-
-// Activation
-Activation.belongsTo(License, {
-  foreignKey: 'licenseId',
-  as: 'license'
-});
-
-// Subscription
-Subscription.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-Subscription.hasMany(Invoice, { foreignKey: 'subscriptionId', as: 'invoices' });
-
-// Invoice
-Invoice.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-Invoice.belongsTo(Subscription, { foreignKey: 'subscriptionId', as: 'subscription' });
-
-
-// --- Função de Sincronização ---
-// Adicionamos o objeto `db` ao escopo da função para referência.
-db.syncDatabase = async (force = false) => {
-  try {
-    await sequelize.sync({ force });
-    logger.startup('Database sincronizado');
-  } catch (error) {
-    logger.error(`Erro ao sincronizar database: ${error.message}`);
-    throw error;
-  }
-};
-
-module.exports = db;

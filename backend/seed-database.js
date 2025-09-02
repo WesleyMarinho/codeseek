@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { User, Category, Product, License, Subscription, Activation, Invoice, WebhookLog, Setting } = require('./models');
+const { User, Category, Product, License, Subscription, Activation, Invoice, WebhookLog, Setting } = require('./models/Index');
 const crypto = require('crypto');
 
 async function seedDatabase() {

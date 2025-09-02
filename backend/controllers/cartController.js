@@ -1,4 +1,4 @@
-const { Product, Category, Setting } = require('../models');
+const { Product, Category, Setting } = require('../models/Index');
 const logger = require('../config/logger');
 
 class CartController {

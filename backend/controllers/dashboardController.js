@@ -1,6 +1,6 @@
 const path = require('path');
 const { Op } = require('sequelize');
-const { User, Product, License, Subscription, Invoice } = require('../models');
+const { User, Product, License, Subscription, Invoice } = require('../models/Index');
 const logger = require('../config/logger');
 
 // --- Helper Functions ---

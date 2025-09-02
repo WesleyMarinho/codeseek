@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { WebhookLog } = require('../models');
+const { WebhookLog } = require('../models/Index');
 const { Op } = require('sequelize');
 const logger = require('./logger');
 

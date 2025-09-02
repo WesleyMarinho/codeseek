@@ -1,4 +1,4 @@
-const { User, Product, License, Activation } = require('../models');
+const { User, Product, License, Activation } = require('../models/Index');
 const { fn, col } = require('sequelize');
 const crypto = require('crypto');
 

@@ -1,5 +1,5 @@
 // backend/controllers/adminSettingsController.js
-const { Setting } = require('../models');
+const { Setting } = require('../models/Index');
 const logger = require('../config/logger');
 const nodemailer = require('nodemailer');
 const { sendEmail, sendTestEmailInternal } = require('./emailController');

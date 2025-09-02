@@ -11,7 +11,7 @@ const helmet = require('helmet');
 // --- Local Modules & Configuration ---
 const redisClient = require('./config/redis');
 const { testConnection } = require('./config/database');
-const { syncDatabase } = require('./models');
+const { syncDatabase } = require('./models/Index');
 const logger = require('./config/logger');
 const scheduler = require('./config/scheduler');
 const webRoutes = require('./routes/web');
