@@ -485,12 +485,12 @@ async function seedDatabase() {
     // testUser invoices (monthly All Access)
     for (let i = 0; i < 3; i++) {
       const invoiceDate = new Date(Date.now() - (i * 30 + 5) * 24 * 60 * 60 * 1000);
-      invoices.push(
-        await Invoice.create({
+      const [invoice] = await Invoice.findOrCreate({
+        where: { invoiceNumber: `INV-2025-${String(100 + i).padStart(3, '0')}` },
+        defaults: {
           userId: testUser.id,
           subscriptionId: testUserSubscription.id,
           chargebeeInvoiceId: 'in_' + crypto.randomBytes(12).toString('hex'),
-          invoiceNumber: `INV-2025-${String(100 + i).padStart(3, '0')}`,
           amount: 29.99,
           currency: 'USD',
           status: 'paid',
@@ -499,17 +499,18 @@ async function seedDatabase() {
           paidAt: new Date(invoiceDate.getTime() + 2 * 24 * 60 * 60 * 1000),
           createdAt: invoiceDate,
           updatedAt: new Date(invoiceDate.getTime() + 2 * 24 * 60 * 60 * 1000)
-        })
-      );
+        }
+      });
+      invoices.push(invoice);
     }
 
     // premiumUser invoices (individual purchases)
-    invoices.push(
-      await Invoice.create({
+    const [invoice150] = await Invoice.findOrCreate({
+      where: { invoiceNumber: 'INV-2025-150' },
+      defaults: {
         userId: premiumUser.id,
         subscriptionId: null, // Individual purchase
         chargebeeInvoiceId: 'in_' + crypto.randomBytes(12).toString('hex'),
-        invoiceNumber: 'INV-2025-150',
         amount: 19.99,
         currency: 'USD',
         status: 'paid',
@@ -518,12 +519,15 @@ async function seedDatabase() {
         paidAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
-      }),
-      await Invoice.create({
+      }
+    });
+
+    const [invoice151] = await Invoice.findOrCreate({
+      where: { invoiceNumber: 'INV-2025-151' },
+      defaults: {
         userId: premiumUser.id,
         subscriptionId: null,
         chargebeeInvoiceId: 'in_' + crypto.randomBytes(12).toString('hex'),
-        invoiceNumber: 'INV-2025-151',
         amount: 14.99,
         currency: 'USD',
         status: 'paid',
@@ -532,16 +536,18 @@ async function seedDatabase() {
         paidAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      })
-    );
+      }
+    });
+
+    invoices.push(invoice150, invoice151);
 
     // demoUser: Failed payment
-    invoices.push(
-      await Invoice.create({
+    const [invoice200] = await Invoice.findOrCreate({
+      where: { invoiceNumber: 'INV-2025-200' },
+      defaults: {
         userId: demoUser.id,
         subscriptionId: null,
         chargebeeInvoiceId: 'in_' + crypto.randomBytes(12).toString('hex'),
-        invoiceNumber: 'INV-2025-200',
         amount: 19.99,
         currency: 'USD',
         status: 'failed',
@@ -550,10 +556,10 @@ async function seedDatabase() {
         paidAt: null,
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      })
-    );
+      }
+    });
 
-    console.log(`✅ Created ${invoices.length} invoices with various statuses`);
+    invoices.push(invoice200);
 
     console.log(`✅ Created ${invoices.length} invoices with various statuses`);
 
