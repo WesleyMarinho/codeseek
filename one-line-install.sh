@@ -621,49 +621,36 @@ fi
 # Remover configuração padrão
 rm -f /etc/nginx/sites-enabled/default
 
-# Criar configuração do CodeSeek
+# Criar configuração inicial sem SSL para permitir emissão automática do certificado
 cat > "/etc/nginx/sites-available/codeseek" << EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
-    
-    # Redirect HTTP to HTTPS
-    return 301 https://\$server_name\$request_uri;
-}
 
-server {
-    listen 443 ssl http2;
-    server_name $DOMAIN www.$DOMAIN;
-    
-    # SSL Configuration (will be updated by Certbot)
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    
+
     # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-    
+
     # Static files
     location /static/ {
         alias $APP_DIR/frontend/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     location /uploads/ {
         alias $APP_DIR/uploads/;
         expires 1y;
         add_header Cache-Control "public";
     }
-    
+
     # Main application
     location / {
         proxy_pass http://localhost:3000;
@@ -675,18 +662,18 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
     }
-    
+
     # Security
     location ~ /\. {
         deny all;
     }
-    
+
     # File upload size
     client_max_body_size 10M;
 }
