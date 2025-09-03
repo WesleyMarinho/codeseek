@@ -908,4 +908,4 @@ EOF
 chown codeseek:codeseek "$APP_DIR/installation-info.txt"
 chmod 600 "$APP_DIR/installation-info.txt"
 
-echo -e "${INFO}💾 Informações da instalação salvas em: $APP_DIR/installation-info.txt${NC}\n"
+info "💾 Informações da instalação salvas em: $APP_DIR/installation-info.txt"
