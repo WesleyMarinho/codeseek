@@ -1,4 +1,6 @@
 // backend/models/Index.js
+// NOTE: The filename intentionally uses a capital "I" so require('./models/Index')
+// resolves correctly on case-sensitive filesystems (e.g., Linux).
 const { Sequelize } = require('sequelize');
 const { sequelize } = require('../config/database');
 const logger = require('../config/logger');
