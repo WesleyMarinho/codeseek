@@ -152,28 +152,14 @@ check_frontend_build() {
     fi
 }
 
-# --- Verificar serviço systemd ---
-check_systemd_service() {
-    step "Verificando serviço systemd"
-    
-    if systemctl list-unit-files | grep -q "$SERVICE.service"; then
-        add_check_result "Arquivo de serviço" "PASS" "$SERVICE.service encontrado"
-        
-        local service_status=$(systemctl is-active "$SERVICE" 2>/dev/null || echo "inactive")
-        if [ "$service_status" = "active" ]; then
-            add_check_result "Status do serviço" "PASS" "Serviço está ativo"
-        else
-            add_check_result "Status do serviço" "FAIL" "Serviço não está ativo (status: $service_status)"
-        fi
-        
-        local service_enabled=$(systemctl is-enabled "$SERVICE" 2>/dev/null || echo "disabled")
-        if [ "$service_enabled" = "enabled" ]; then
-            add_check_result "Serviço habilitado" "PASS" "Serviço habilitado para inicialização automática"
-        else
-            add_check_result "Serviço habilitado" "FAIL" "Serviço não habilitado (status: $service_enabled)"
-        fi
+# --- Verificar serviço PM2 ---
+check_pm2_service() {
+    step "Verificando serviço PM2"
+
+    if pm2 describe "$SERVICE" >/dev/null 2>&1; then
+        add_check_result "Processo PM2" "PASS" "$SERVICE encontrado"
     else
-        add_check_result "Arquivo de serviço" "FAIL" "$SERVICE.service não encontrado"
+        add_check_result "Processo PM2" "FAIL" "$SERVICE não encontrado ou inativo"
     fi
 }
 
@@ -271,7 +257,7 @@ main() {
     check_nodejs
     check_backend_dependencies
     check_frontend_build
-    check_systemd_service
+    check_pm2_service
     check_nginx
     
     # Gerar relatório final

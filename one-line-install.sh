@@ -282,7 +282,19 @@ else
 fi
 
 # ==============================================================================
-# 4. INSTALAÇÃO DO POSTGRESQL
+# 4. INSTALAÇÃO DO PM2
+# ==============================================================================
+
+step "Instalando PM2"
+if ! command_exists pm2; then
+    npm install -g pm2
+    log "PM2 $(pm2 -v) instalado"
+else
+    log "PM2 já está instalado: $(pm2 -v)"
+fi
+
+# ==============================================================================
+# 5. INSTALAÇÃO DO POSTGRESQL
 # ==============================================================================
 
 step "Instalando PostgreSQL"
@@ -300,7 +312,7 @@ else
 fi
 
 # ==============================================================================
-# 5. INSTALAÇÃO DO REDIS
+# 6. INSTALAÇÃO DO REDIS
 # ==============================================================================
 
 step "Instalando Redis"
@@ -318,7 +330,7 @@ else
 fi
 
 # ==============================================================================
-# 6. INSTALAÇÃO DO NGINX
+# 7. INSTALAÇÃO DO NGINX
 # ==============================================================================
 
 step "Instalando Nginx"
@@ -336,7 +348,7 @@ else
 fi
 
 # ==============================================================================
-# 7. INSTALAÇÃO DO CERTBOT
+# 8. INSTALAÇÃO DO CERTBOT
 # ==============================================================================
 
 step "Instalando Certbot"
@@ -348,7 +360,7 @@ else
 fi
 
 # ==============================================================================
-# 8. CONFIGURAÇÃO DO USUÁRIO DA APLICAÇÃO
+# 9. CONFIGURAÇÃO DO USUÁRIO DA APLICAÇÃO
 # ==============================================================================
 
 step "Configurando usuário da aplicação"
@@ -360,7 +372,7 @@ else
 fi
 
 # ==============================================================================
-# 9. CONFIGURAÇÃO DO DIRETÓRIO DA APLICAÇÃO
+# 10. CONFIGURAÇÃO DO DIRETÓRIO DA APLICAÇÃO
 # ==============================================================================
 
 step "Configurando diretório da aplicação"
@@ -377,7 +389,7 @@ mkdir -p "$APP_DIR"
 chown codeseek:codeseek "$APP_DIR"
 
 # ==============================================================================
-# 10. CLONAGEM DO REPOSITÓRIO
+# 11. CLONAGEM DO REPOSITÓRIO
 # ==============================================================================
 
 step "Clonando repositório"
@@ -412,7 +424,7 @@ fi
 log "Código fonte obtido"
 
 # ==============================================================================
-# 11. INSTALAÇÃO DE DEPENDÊNCIAS DO BACKEND
+# 12. INSTALAÇÃO DE DEPENDÊNCIAS DO BACKEND
 # ==============================================================================
 
 step "Instalando dependências do backend"
@@ -438,7 +450,7 @@ else
 fi
 
 # ==============================================================================
-# 12. CONFIGURAÇÃO DE VARIÁVEIS DE AMBIENTE
+# 13. CONFIGURAÇÃO DE VARIÁVEIS DE AMBIENTE
 # ==============================================================================
 
 step "Configurando variáveis de ambiente"
@@ -508,7 +520,7 @@ chmod 600 "$APP_DIR/backend/.env"
 log "Arquivo .env configurado"
 
 # ==============================================================================
-# 13. CONFIGURAÇÃO DO POSTGRESQL
+# 14. CONFIGURAÇÃO DO POSTGRESQL
 # ==============================================================================
 
 step "Configurando PostgreSQL"
@@ -535,7 +547,7 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 log "Privilégios concedidos ao usuário '$DB_USER'"
 
 # ==============================================================================
-# 14. CONFIGURAÇÃO DE DIRETÓRIOS
+# 15. CONFIGURAÇÃO DE DIRETÓRIOS
 # ==============================================================================
 
 step "Configurando diretórios"
@@ -555,7 +567,7 @@ chmod 700 "$APP_DIR/backups"
 log "Diretórios configurados"
 
 # ==============================================================================
-# 15. INICIALIZAÇÃO DO BANCO DE DADOS
+# 16. INICIALIZAÇÃO DO BANCO DE DADOS
 # ==============================================================================
 
 step "Inicializando banco de dados"
@@ -578,7 +590,7 @@ else
 fi
 
 # ==============================================================================
-# 16. COMPILAÇÃO DO FRONTEND
+# 17. COMPILAÇÃO DO FRONTEND
 # ==============================================================================
 
 step "Compilando frontend"
@@ -607,7 +619,7 @@ else
 fi
 
 # ==============================================================================
-# 17. CONFIGURAÇÃO DO NGINX
+# 18. CONFIGURAÇÃO DO NGINX
 # ==============================================================================
 
 step "Configurando Nginx"
@@ -696,52 +708,23 @@ else
 fi
 
 # ==============================================================================
-# 18. CONFIGURAÇÃO DO SERVIÇO SYSTEMD
+# 19. CONFIGURAÇÃO DO PM2
 # ==============================================================================
 
-step "Configurando serviço systemd"
+step "Configurando PM2"
 
-cat > "/etc/systemd/system/codeseek.service" << EOF
-[Unit]
-Description=CodeSeek Application
-After=network.target postgresql.service redis-server.service
-Wants=postgresql.service redis-server.service
+if ! command_exists pm2; then
+    npm install -g pm2
+fi
 
-[Service]
-Type=simple
-User=codeseek
-Group=codeseek
-WorkingDirectory=$APP_DIR/backend
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=10
-Environment=NODE_ENV=production
-EnvironmentFile=$APP_DIR/backend/.env
+su - codeseek -c "pm2 start $APP_DIR/ecosystem.config.js"
+pm2 startup systemd -u codeseek --hp $APP_DIR >/dev/null
+su - codeseek -c "pm2 save"
 
-# Security
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=$APP_DIR
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=codeseek
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Recarregar systemd e habilitar serviço
-systemctl daemon-reload
-systemctl enable codeseek.service
-
-log "Serviço systemd configurado"
+log "PM2 configurado"
 
 # ==============================================================================
-# 19. CONFIGURAÇÃO DO FIREWALL
+# 20. CONFIGURAÇÃO DO FIREWALL
 # ==============================================================================
 
 step "Configurando firewall"
@@ -764,7 +747,7 @@ ufw --force enable
 log "Firewall configurado"
 
 # ==============================================================================
-# 20. CONFIGURAÇÃO SSL
+# 21. CONFIGURAÇÃO SSL
 # ==============================================================================
 
 step "Configurando SSL"
@@ -785,14 +768,14 @@ else
 fi
 
 # ==============================================================================
-# 21. INICIALIZAÇÃO DOS SERVIÇOS
+# 22. INICIALIZAÇÃO DOS SERVIÇOS
 # ==============================================================================
 
 step "Iniciando serviços"
 
-# Iniciar aplicação
-systemctl start codeseek.service
-wait_for_service codeseek.service
+# Iniciar aplicação com PM2
+su - codeseek -c "pm2 restart codeseek || pm2 start $APP_DIR/ecosystem.config.js"
+su - codeseek -c "pm2 save"
 
 # Recarregar Nginx
 systemctl reload nginx
@@ -800,7 +783,7 @@ systemctl reload nginx
 log "Todos os serviços iniciados"
 
 # ==============================================================================
-# 22. VERIFICAÇÃO FINAL
+# 23. VERIFICAÇÃO FINAL
 # ==============================================================================
 
 step "Executando verificação final"
@@ -829,7 +812,7 @@ if [ -f "$APP_DIR/backend/diagnose.js" ]; then
 fi
 
 # ==============================================================================
-# 23. RELATÓRIO FINAL
+# 24. RELATÓRIO FINAL
 # ==============================================================================
 
 echo -e "\n${MAGENTA}"
@@ -857,13 +840,13 @@ echo -e "   🔑 Encryption Key: ${YELLOW}$ENCRYPTION_KEY${NC}"
 echo -e "\n${CYAN}📝 Arquivos Importantes:${NC}"
 echo -e "   ⚙️  Configuração: ${BLUE}$APP_DIR/backend/.env${NC}"
 echo -e "   📋 Logs da aplicação: ${BLUE}$APP_DIR/logs/app.log${NC}"
-echo -e "   📋 Logs do sistema: ${BLUE}journalctl -u codeseek.service${NC}"
+echo -e "   📋 Logs do PM2: ${BLUE}pm2 logs codeseek${NC}"
 echo -e "   🌐 Configuração Nginx: ${BLUE}/etc/nginx/sites-available/codeseek${NC}"
 
 echo -e "\n${CYAN}🛠️  Comandos Úteis:${NC}"
-echo -e "   Status dos serviços: ${BLUE}sudo systemctl status codeseek nginx postgresql redis-server${NC}"
-echo -e "   Logs em tempo real: ${BLUE}sudo journalctl -u codeseek.service -f${NC}"
-echo -e "   Reiniciar aplicação: ${BLUE}sudo systemctl restart codeseek${NC}"
+echo -e "   Status dos serviços: ${BLUE}pm2 status codeseek && sudo systemctl status nginx postgresql redis-server${NC}"
+echo -e "   Logs em tempo real: ${BLUE}pm2 logs codeseek${NC}"
+echo -e "   Reiniciar aplicação: ${BLUE}sudo -u codeseek pm2 restart codeseek${NC}"
 echo -e "   Verificar configuração: ${BLUE}sudo bash $APP_DIR/post-install-check.sh${NC}"
 echo -e "   Troubleshooting: ${BLUE}sudo bash $APP_DIR/troubleshoot.sh${NC}"
 
@@ -894,13 +877,13 @@ Usuário da aplicação: codeseek
 Arquivos importantes:
 - Configuração: $APP_DIR/backend/.env
 - Logs: $APP_DIR/logs/app.log
-- Configuração Nginx: /etc/nginx/sites-available/codeseek
-- Serviço systemd: /etc/systemd/system/codeseek.service
+  - Configuração Nginx: /etc/nginx/sites-available/codeseek
+  - PM2 process: pm2 status codeseek
 
 Comandos úteis:
-- Status: sudo systemctl status codeseek
-- Logs: sudo journalctl -u codeseek.service -f
-- Reiniciar: sudo systemctl restart codeseek
+  - Status: pm2 status codeseek
+  - Logs: pm2 logs codeseek
+  - Reiniciar: sudo -u codeseek pm2 restart codeseek
 - Verificação: sudo bash $APP_DIR/post-install-check.sh
 - Troubleshooting: sudo bash $APP_DIR/troubleshoot.sh
 EOF

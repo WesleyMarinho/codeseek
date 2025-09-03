@@ -8,7 +8,7 @@
 # Exemplo: */5 * * * * /opt/codeseek/monitor.sh
 #
 # Funcionalidades:
-# - Monitoramento de serviços systemd
+# - Monitoramento de processos PM2
 # - Verificação de saúde da aplicação
 # - Monitoramento de recursos (CPU, memória, disco)
 # - Verificação de banco de dados e Redis
@@ -22,7 +22,7 @@ set -euo pipefail  # Exit on error, undefined vars, pipe failures
 LOG_FILE="${CODESEEK_LOG_DIR:-/var/log/codeseek}/monitor.log"
 ALERT_EMAIL="${CODESEEK_ALERT_EMAIL:-admin@example.com}"
 APP_URL="${CODESEEK_APP_URL:-http://localhost:3000/health}"
-SERVICE_NAME="${CODESEEK_SERVICE_NAME:-codeseek.service}"
+SERVICE_NAME="${CODESEEK_SERVICE_NAME:-codeseek}"
 MAX_CPU=${CODESEEK_MAX_CPU:-90}  # Alerta se CPU > 90%
 MAX_MEM=${CODESEEK_MAX_MEM:-90}  # Alerta se memória > 90%
 MAX_DISK=${CODESEEK_MAX_DISK:-90} # Alerta se disco > 90%
@@ -49,9 +49,9 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Verificar se serviço existe
+# Verificar se processo PM2 existe
 service_exists() {
-    systemctl list-unit-files "$1" >/dev/null 2>&1
+    pm2 describe "$1" >/dev/null 2>&1
 }
 
 # Função para exibir mensagens
@@ -132,42 +132,35 @@ initialize_monitor() {
 # FUNÇÕES DE VERIFICAÇÃO
 # ==============================================================================
 
-# Verificar status do serviço systemd
+# Verificar status do processo PM2
 check_service_status() {
-    step "Verificando status do serviço $SERVICE_NAME"
-    
+    step "Verificando status do processo $SERVICE_NAME"
+
     if ! service_exists "$SERVICE_NAME"; then
-        error "Serviço $SERVICE_NAME não existe no sistema!"
+        error "Processo $SERVICE_NAME não encontrado!"
         return 1
     fi
-    
-    if ! systemctl is-active --quiet "$SERVICE_NAME"; then
-        error "Serviço $SERVICE_NAME não está rodando!"
-        
-        # Tentar reiniciar o serviço
-        warning "Tentando reiniciar o serviço..."
-        if systemctl restart "$SERVICE_NAME" 2>/dev/null; then
-            sleep 3  # Aguardar inicialização
-            
-            # Verificar se o reinício foi bem-sucedido
-            if systemctl is-active --quiet "$SERVICE_NAME"; then
-                log "Serviço $SERVICE_NAME reiniciado com sucesso"
+
+    if ! pm2 describe "$SERVICE_NAME" >/dev/null 2>&1; then
+        error "Processo $SERVICE_NAME não está rodando!"
+
+        warning "Tentando reiniciar o processo..."
+        if pm2 restart "$SERVICE_NAME" 2>/dev/null; then
+            sleep 3
+            if pm2 describe "$SERVICE_NAME" >/dev/null 2>&1; then
+                log "Processo $SERVICE_NAME reiniciado com sucesso"
             else
-                error "Falha ao reiniciar o serviço $SERVICE_NAME!"
+                error "Falha ao reiniciar o processo $SERVICE_NAME"
                 return 1
             fi
         else
-            error "Não foi possível reiniciar o serviço $SERVICE_NAME!"
+            error "Não foi possível reiniciar o processo $SERVICE_NAME"
             return 1
         fi
     else
-        log "Serviço $SERVICE_NAME está rodando normalmente"
+        log "Processo $SERVICE_NAME está rodando normalmente"
     fi
-    
-    # Verificar status detalhado
-    local status_info=$(systemctl status "$SERVICE_NAME" --no-pager -l 2>/dev/null | head -3 | tail -1 || echo "Status não disponível")
-    info "Status: $status_info"
-    
+
     return 0
 }
 
