@@ -1,4 +1,4 @@
-const { Product, Category, Setting } = require('../models/index');
+const { Product, Category, Setting } = require('../models/Index');
 const logger = require('../config/logger');
 
 class CartController {
@@ -210,3 +210,4 @@ class CartController {
 }
 
 module.exports = CartController;
+

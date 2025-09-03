@@ -1,4 +1,4 @@
-const { Subscription, User } = require('../models/index');
+const { Subscription, User } = require('../models/Index');
 const logger = require('../config/logger');
 
 // ===============================================================
@@ -476,3 +476,4 @@ module.exports = {
     updateSubscriptionStatus,
     deleteSubscription
 };
+

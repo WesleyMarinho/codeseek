@@ -1,5 +1,5 @@
 // backend/controllers/adminCategoryController.js
-const { Category, Product, sequelize } = require('../models/index');
+const { Category, Product, sequelize } = require('../models/Index');
 const logger = require('../config/logger');
 
 const adminCategoryController = {
@@ -96,3 +96,4 @@ const adminCategoryController = {
 };
 
 module.exports = adminCategoryController;
+

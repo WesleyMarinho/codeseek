@@ -1,4 +1,4 @@
-const { Product, User, Invoice, Subscription, Setting } = require('../models/index');
+const { Product, User, Invoice, Subscription, Setting } = require('../models/Index');
 const logger = require('../config/logger');
 const { initializeChargebee, getChargebeeConfig } = require('../config/chargebee');
 
@@ -391,3 +391,4 @@ class CheckoutController {
 }
 
 module.exports = CheckoutController;
+

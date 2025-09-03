@@ -1,5 +1,5 @@
 // backend/controllers/adminSettingsController.js
-const { Setting } = require('../models/index');
+const { Setting } = require('../models/Index');
 const logger = require('../config/logger');
 const nodemailer = require('nodemailer');
 const { sendEmail, sendTestEmailInternal } = require('./emailController');
@@ -505,3 +505,4 @@ exports.testSMTPOnly = async (req, res) => {
         res.status(500).json({ message: errorMessage });
     }
 };
+

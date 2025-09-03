@@ -1,4 +1,4 @@
-const { Setting } = require('../models/index');
+const { Setting } = require('../models/Index');
 const logger = require('./logger');
 
 /**
@@ -74,3 +74,4 @@ module.exports = {
   getChargebeeConfig,
   initializeChargebee
 };
+

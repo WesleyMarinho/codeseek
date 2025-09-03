@@ -1,4 +1,4 @@
-const { User, Product, License, Activation } = require('../models/index');
+const { User, Product, License, Activation } = require('../models/Index');
 const { fn, col } = require('sequelize');
 const crypto = require('crypto');
 
@@ -389,3 +389,4 @@ exports.getFormOptions = async (req, res) => {
         });
     }
 };
+

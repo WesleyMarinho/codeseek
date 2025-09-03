@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { WebhookLog } = require('../models/index');
+const { WebhookLog } = require('../models/Index');
 const { Op } = require('sequelize');
 const logger = require('./logger');
 
@@ -134,3 +134,4 @@ class Scheduler {
 // Exportar instância singleton
 const scheduler = new Scheduler();
 module.exports = scheduler;
+

@@ -25,7 +25,7 @@ const CheckoutController = require('../controllers/checkoutController');
 // --- Configurações e Modelos ---
 const { upload, settingsUpload, handleUploadError, deleteFile } = require('../config/upload');
 const logger = require('../config/logger');
-const { Product, License } = require('../models/index');
+const { Product, License } = require('../models/Index');
 
 // ===============================================================
 // --- ROTAS PÚBLICAS ---
@@ -273,3 +273,4 @@ adminRouter.delete('/webhooks/clear', webhookController.clearAllWebhookLogs);
 router.use('/admin', adminRouter);
 
 module.exports = router;
+

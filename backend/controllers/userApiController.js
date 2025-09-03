@@ -1,4 +1,4 @@
-const { User } = require('../models/index');
+const { User } = require('../models/Index');
 const logger = require('../config/logger');
 
 /**
@@ -83,3 +83,4 @@ module.exports = {
   updateProfile,
   changePassword,
 };
+

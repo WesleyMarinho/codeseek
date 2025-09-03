@@ -1,6 +1,6 @@
 // backend/controllers/adminProductController.js (VERSÃO FINAL E CORRIGIDA)
 
-const { Product, Category } = require('../models/index');
+const { Product, Category } = require('../models/Index');
 const logger = require('../config/logger');
 const { organizeMediaInfo, deleteFile } = require('../config/upload');
 
@@ -242,3 +242,4 @@ const adminProductController = {
 };
 
 module.exports = adminProductController;
+

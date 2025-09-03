@@ -1,6 +1,6 @@
 // backend/controllers/publicController.js (VERSÃO FINAL E CORRIGIDA)
 
-const { Product, Category, sequelize } = require('../models/index');
+const { Product, Category, sequelize } = require('../models/Index');
 const { Op } = require('sequelize');
 const logger = require('../config/logger');
 
@@ -155,3 +155,4 @@ const publicController = {
 };
 
 module.exports = publicController;
+

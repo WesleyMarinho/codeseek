@@ -1,4 +1,4 @@
-const { User } = require('../models/index');
+const { User } = require('../models/Index');
 const { Op } = require('sequelize'); // <-- CORREÇÃO: Importação do Op adicionada aqui
 const logger = require('../config/logger');
 
@@ -177,3 +177,4 @@ const adminApiController = {
 };
 
 module.exports = adminApiController;
+
