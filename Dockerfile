@@ -1,63 +1,59 @@
-# Multi-stage build for CodeSeek application
-# Stage 1: Build frontend
-FROM node:18-alpine AS frontend-builder
-
+# Estágio de construção para o frontend
+FROM node:18-alpine AS frontend-build
 WORKDIR /app/frontend
 
-# Copy frontend package files
+# Copiar arquivos de configuração do frontend
 COPY frontend/package*.json ./
 
-# Install frontend dependencies
-RUN npm ci --only=production
+# Instalar dependências do frontend
+RUN npm install
 
-# Copy frontend source code
+# Copiar código-fonte do frontend
 COPY frontend/ ./
 
-# Build frontend assets (if needed)
-RUN npm run build || echo "No build script found, using static files"
+# Construir assets do frontend
+RUN npm run build-css-prod
 
-# Stage 2: Backend application
-FROM node:18-alpine AS backend
+# Estágio de construção para o backend
+FROM node:18-alpine AS backend-build
+WORKDIR /app/backend
 
-WORKDIR /app
-
-# Install system dependencies
-RUN apk add --no-cache \
-    postgresql-client \
-    redis \
-    curl
-
-# Copy backend package files
+# Copiar arquivos de configuração do backend
 COPY backend/package*.json ./
 
-# Install backend dependencies
-RUN npm ci --only=production
+# Instalar dependências do backend
+RUN npm install --production
 
-# Copy backend source code
-COPY backend/ ./
+# Estágio final
+FROM node:18-alpine
+WORKDIR /app
 
-# Copy built frontend from previous stage
-COPY --from=frontend-builder /app/frontend /app/public
+# Instalar dependências do sistema
+RUN apk add --no-cache curl
 
-# Create uploads directory
-RUN mkdir -p /app/uploads && chmod 755 /app/uploads
+# Criar diretório de uploads
+RUN mkdir -p /app/backend/uploads
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S codeseek -u 1001 -G nodejs
+# Copiar arquivos do backend
+COPY --from=backend-build /app/backend/node_modules /app/backend/node_modules
+COPY backend/ /app/backend/
 
-# Change ownership of app directory
-RUN chown -R codeseek:nodejs /app
+# Copiar arquivos do frontend
+COPY --from=frontend-build /app/frontend/public /app/frontend/public
+COPY frontend/ /app/frontend/
 
-# Switch to non-root user
-USER codeseek
+# Definir variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3000
 
-# Expose port
+# Expor porta
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+# Definir diretório de trabalho para o backend
+WORKDIR /app/backend
 
-# Start the application
-CMD ["npm", "start"]
+# Verificação de saúde
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 CMD curl -f http://localhost:3000/health || exit 1
+
+# Comando para iniciar a aplicação
+CMD ["node", "server.js"]

@@ -1,108 +1,100 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: codeseek-postgres
-    environment:
-      POSTGRES_DB: digiserver_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 317ec4445d0b70711607
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
-    networks:
-      - codeseek-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d digiserver_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: codeseek-redis
-    command: redis-server --requirepass 08d0bdd400563b50d631
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - codeseek-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "08d0bdd400563b50d631", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # CodeSeek Application
+  # Serviço do aplicativo Node.js
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: codeseek-app
-    environment:
-      # Server Configuration
-      PORT: 3000
-      NODE_ENV: production
-      
-      # Database Configuration
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: digiserver_db
-      DB_USER: postgres
-      DB_PASSWORD: 317ec4445d0b70711607
-      
-      # Redis Configuration
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: 08d0bdd400563b50d631
-      
-      # Security Configuration
-      SESSION_SECRET: sua_chave_secreta_muito_forte_aqui_123456789
-      BCRYPT_ROUNDS: 12
-      
-      # Chargebee Configuration (update with your credentials)
-      CHARGEBEE_SITE: seu_site_chargebee
-      CHARGEBEE_API_KEY: sua_api_key_chargebee
-      
-      # Application Configuration
-      BASE_URL: http://localhost:3000
+    container_name: digiserver-app
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - uploads_data:/app/uploads
-      - ./backend/logs:/app/logs
-    networks:
-      - codeseek-network
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./backend/uploads:/app/backend/uploads
+      - ./backend/node_modules:/app/backend/node_modules
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=digiserver_prod
+      - DB_USER=digiserver_user
+      - DB_PASSWORD=digiserver_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - SESSION_SECRET=your_session_secret_here
+      - BASE_URL=http://localhost:3000
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
+    networks:
+      - digiserver-network
+
+  # Serviço do banco de dados PostgreSQL
+  postgres:
+    image: postgres:14-alpine
+    container_name: digiserver-postgres
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=digiserver_user
+      - POSTGRES_PASSWORD=digiserver_password
+      - POSTGRES_DB=digiserver_prod
+    networks:
+      - digiserver-network
+
+  # Serviço do Redis
+  redis:
+    image: redis:7-alpine
+    container_name: digiserver-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - digiserver-network
+
+  # Serviço do Nginx (proxy reverso)
+  nginx:
+    image: nginx:1.23-alpine
+    container_name: digiserver-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/public:/app/frontend/public
+      - ./backend/uploads:/app/backend/uploads
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - app
+    networks:
+      - digiserver-network
+
+  # Serviço do Certbot (para certificados SSL)
+  certbot:
+    image: certbot/certbot
+    container_name: digiserver-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  uploads_data:
-    driver: local
+  postgres-data:
+  redis-data:
 
 networks:
-  codeseek-network:
+  digiserver-network:
     driver: bridge

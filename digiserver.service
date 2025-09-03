@@ -1,0 +1,18 @@
+[Unit]
+Description=DigiServer Application
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=digiserver
+WorkingDirectory=/opt/digiserver/backend
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=digiserver
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
