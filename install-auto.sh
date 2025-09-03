@@ -123,7 +123,12 @@ else
 fi
 log "Versões instaladas: Node.js $(node -v), npm $(npm -v)"
 
-# 4. Criar usuário para a aplicação
+# 4. Instalar PM2
+log "Instalando PM2..."
+npm install -g pm2 || error "Falha ao instalar PM2"
+log "PM2 $(pm2 -v) instalado"
+
+# 5. Criar usuário para a aplicação
 log "Criando usuário do sistema '$APP_USER'..."
 if ! id -u $APP_USER &>/dev/null; then
     useradd -m -s /bin/bash $APP_USER || error "Falha ao criar usuário $APP_USER"
@@ -131,12 +136,12 @@ else
     log "Usuário '$APP_USER' já existe."
 fi
 
-# 5. Criar diretório da aplicação
+# 6. Criar diretório da aplicação
 log "Criando diretório da aplicação em '$APP_DIR'..."
 mkdir -p $APP_DIR
 chown -R $APP_USER:$APP_USER $APP_DIR
 
-# 6. Clonar o repositório
+# 7. Clonar o repositório
 log "Clonando o repositório..."
 if [ -d "$APP_DIR/.git" ]; then
     warning "O diretório '$APP_DIR' já contém um repositório git. Atualizando..."
@@ -148,12 +153,12 @@ else
 fi
 chown -R $APP_USER:$APP_USER $APP_DIR
 
-# 7. Instalar dependências do backend
+# 8. Instalar dependências do backend
 log "Instalando dependências do backend (npm install)..."
 cd $APP_DIR/backend
 sudo -u $APP_USER npm install --production || error "Falha ao instalar dependências do backend"
 
-# 8. Configurar variáveis de ambiente (.env)
+# 9. Configurar variáveis de ambiente (.env)
 log "Configurando variáveis de ambiente (.env)..."
 ENV_FILE="$APP_DIR/backend/.env"
 if [ ! -f "$ENV_FILE" ]; then
@@ -188,7 +193,7 @@ else
 fi
 DB_PASSWORD=$(grep DB_PASSWORD $ENV_FILE | cut -d '=' -f2) # Carrega a senha para usar abaixo
 
-# 9. Configurar banco de dados PostgreSQL
+# 10. Configurar banco de dados PostgreSQL
 log "Configurando banco de dados PostgreSQL..."
 # Iniciar PostgreSQL se não estiver rodando
 systemctl enable --now postgresql || error "Falha ao iniciar PostgreSQL"
@@ -219,11 +224,11 @@ else
 fi
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
 
-# 10. Configurar Redis
+# 11. Configurar Redis
 log "Configurando Redis..."
 systemctl enable --now redis-server || error "Falha ao iniciar ou habilitar o Redis"
 
-# 11. Configurar Nginx
+# 12. Configurar Nginx
 log "Configurando Nginx para o domínio $DOMAIN..."
 NGINX_CONF="/etc/nginx/sites-available/codeseek"
 cp $APP_DIR/nginx.conf $NGINX_CONF
@@ -233,7 +238,7 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t || error "Configuração do Nginx inválida. Verifique o arquivo $NGINX_CONF"
 systemctl restart nginx
 
-# 12. Configurar SSL com Certbot (se selecionado)
+# 13. Configurar SSL com Certbot (se selecionado)
 if [[ "$SETUP_SSL" =~ ^[Ss]$ ]]; then
     log "Configurando certificado SSL com Certbot..."
     # Aguardar Nginx estar pronto
@@ -248,22 +253,20 @@ if [[ "$SETUP_SSL" =~ ^[Ss]$ ]]; then
     fi
 fi
 
-# 13. Configurar serviço systemd
-log "Configurando serviço systemd..."
-cp $APP_DIR/codeseek.service /tmp/codeseek.service.tmp
-sed -i "s/User=codeseek/User=$APP_USER/" /tmp/codeseek.service.tmp
-sed -i "s|WorkingDirectory=/opt/codeseek/backend|WorkingDirectory=$APP_DIR/backend|" /tmp/codeseek.service.tmp
-cp /tmp/codeseek.service.tmp /etc/systemd/system/codeseek.service
-systemctl daemon-reload
-systemctl enable codeseek.service
+# 14. Configurar PM2
+log "Configurando PM2..."
+npm install -g pm2 >/dev/null 2>&1 || true
+su - $APP_USER -c "pm2 start $APP_DIR/ecosystem.config.js"
+pm2 startup systemd -u $APP_USER --hp $APP_DIR >/dev/null
+su - $APP_USER -c "pm2 save"
 
-# 14. Configurar diretórios de uploads
+# 15. Configurar diretórios de uploads
 log "Configurando diretório de uploads..."
 mkdir -p $APP_DIR/backend/uploads
 chown -R $APP_USER:$APP_USER $APP_DIR/backend/uploads
 chmod -R 755 $APP_DIR/backend/uploads
 
-# 15. Inicializar o banco de dados
+# 16. Inicializar o banco de dados
 log "Inicializando o banco de dados (schema e seeds)..."
 cd $APP_DIR/backend
 
@@ -283,7 +286,7 @@ done
 sudo -u $APP_USER NODE_ENV=production node setup-database.js || error "Falha ao configurar o schema do banco de dados"
 sudo -u $APP_USER NODE_ENV=production node seed-database.js || warning "Falha ao popular o banco de dados com dados iniciais (pode não ser um erro se já foi executado)"
 
-# 16. Compilar assets do frontend
+# 17. Compilar assets do frontend
 log "Compilando assets do frontend..."
 cd $APP_DIR/frontend
 # Instalar dependências de desenvolvimento para compilar
@@ -292,21 +295,22 @@ sudo -u $APP_USER npm run build-css-prod || warning "Falha ao compilar CSS do fr
 # Remover dependências de desenvolvimento após a compilação
 sudo -u $APP_USER npm prune --production || warning "Falha ao remover dependências de desenvolvimento"
 
-# 17. Iniciar o serviço
+# 18. Iniciar o serviço
 log "Iniciando o serviço CodeSeek..."
-systemctl start codeseek.service
+su - $APP_USER -c "pm2 restart codeseek || pm2 start $APP_DIR/ecosystem.config.js"
+su - $APP_USER -c "pm2 save"
 
-# 18. Verificar se o serviço está rodando
+# 19. Verificar se o serviço está rodando
 log "Verificando status do serviço..."
 sleep 10
 
-if systemctl is-active --quiet codeseek.service; then
+if su - $APP_USER -c "pm2 describe codeseek" >/dev/null 2>&1; then
     log "Serviço CodeSeek está rodando com sucesso!"
 else
-    error "Falha ao iniciar o serviço CodeSeek. Verifique os logs: journalctl -u codeseek.service"
+    error "Falha ao iniciar o serviço CodeSeek. Verifique os logs com: pm2 logs codeseek"
 fi
 
-# 19. Teste de conectividade
+# 20. Teste de conectividade
 log "Testando conectividade da aplicação..."
 for i in {1..30}; do
     if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|302\|404"; then
@@ -334,9 +338,9 @@ echo -e "Usuário do Banco:     ${BLUE}$DB_USER${NC}"
 echo -e "Senha do Banco:       ${YELLOW}$DB_PASSWORD${NC} (guarde em local seguro!)"  
 echo -e "${GREEN}===================================================${NC}"
 echo -e "\n${YELLOW}Comandos úteis:${NC}"
-echo -e "Ver logs em tempo real:    ${BLUE}sudo journalctl -u codeseek.service -f${NC}"
-echo -e "Reiniciar serviço:         ${BLUE}sudo systemctl restart codeseek.service${NC}"
-echo -e "Status do serviço:         ${BLUE}sudo systemctl status codeseek.service${NC}"
+echo -e "Ver logs em tempo real:    ${BLUE}pm2 logs codeseek${NC}"
+echo -e "Reiniciar serviço:         ${BLUE}sudo -u $APP_USER pm2 restart codeseek${NC}"
+echo -e "Status do serviço:         ${BLUE}pm2 status codeseek${NC}"
 echo -e "Diagnóstico da aplicação:  ${BLUE}cd $APP_DIR/backend && node diagnose.js${NC}"
 echo -e "${GREEN}===================================================${NC}"
 
@@ -357,9 +361,9 @@ SSL Configured: $([[ "$SETUP_SSL" =~ ^[Ss]$ ]] && echo "Yes" || echo "No")
 $([[ "$SETUP_SSL" =~ ^[Ss]$ ]] && echo "SSL Email: $SSL_EMAIL")
 
 Useful Commands:
-- View logs: sudo journalctl -u codeseek.service -f
-- Restart service: sudo systemctl restart codeseek.service
-- Service status: sudo systemctl status codeseek.service
+- View logs: pm2 logs codeseek
+- Restart service: sudo -u $APP_USER pm2 restart codeseek
+- Service status: pm2 status codeseek
 - Diagnose: cd $APP_DIR/backend && node diagnose.js
 EOF
 

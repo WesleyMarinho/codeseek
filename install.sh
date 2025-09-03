@@ -301,6 +301,14 @@ install_nodejs() {
     log "Node.js $node_version and npm $npm_version installed successfully"
 }
 
+install_pm2() {
+    step "Installing PM2..."
+    if ! command -v pm2 >/dev/null 2>&1; then
+        npm install -g pm2 || error "Failed to install PM2"
+    fi
+    log "PM2 $(pm2 -v) installed"
+}
+
 install_postgresql() {
     step "Installing PostgreSQL..."
     
@@ -384,6 +392,7 @@ run_installation() {
     update_system
     install_dependencies
     install_nodejs
+    install_pm2
     install_postgresql
     install_redis
     install_nginx
@@ -891,66 +900,18 @@ setup_webserver
 # SYSTEMD SERVICE CONFIGURATION
 # ==============================================================================
 
-configure_systemd_service() {
-    step "Configuring systemd service..."
-    
-    local service_file="/etc/systemd/system/codeseek.service"
-    
-    cat > "$service_file" << EOF
-[Unit]
-Description=CodeSeek Application Server
-Documentation=https://github.com/codeseek/codeseek
-After=network.target postgresql.service redis-server.service
-Wants=postgresql.service redis-server.service
-Requires=network.target
+configure_pm2() {
+    step "Configuring PM2..."
 
-[Service]
-Type=simple
-User=$APP_USER
-Group=$APP_USER
-WorkingDirectory=$APP_DIR/backend
-Environment=NODE_ENV=production
-Environment=PORT=3000
-EnvironmentFile=$APP_DIR/backend/.env
-ExecStart=/usr/bin/node server.js
-ExecReload=/bin/kill -HUP \$MAINPID
-Restart=always
-RestartSec=10
-TimeoutStartSec=60
-TimeoutStopSec=20
-KillMode=mixed
-KillSignal=SIGTERM
-
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=$APP_DIR
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=codeseek
-
-# Resource limits
-LimitNOFILE=65536
-LimitNPROC=4096
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    
-    # Reload systemd and enable service
-    if ! systemctl daemon-reload; then
-        error "Failed to reload systemd daemon"
+    if ! command -v pm2 >/dev/null 2>&1; then
+        npm install -g pm2 || error "Failed to install PM2"
     fi
-    
-    if ! systemctl enable codeseek; then
-        error "Failed to enable CodeSeek service"
-    fi
-    
-    log "Systemd service configured successfully"
+
+    su - $APP_USER -c "pm2 start $APP_DIR/ecosystem.config.js"
+    pm2 startup systemd -u $APP_USER --hp $APP_DIR >/dev/null
+    su - $APP_USER -c "pm2 save"
+
+    log "PM2 configured successfully"
 }
 
 build_frontend() {
@@ -973,17 +934,14 @@ build_frontend() {
 
 start_services() {
     step "Starting CodeSeek services..."
-    
-    # Start CodeSeek service
-    if ! systemctl start codeseek; then
-        error "Failed to start CodeSeek service"
-    fi
-    
-    # Wait for service to be ready
+
+    su - $APP_USER -c "pm2 restart codeseek || pm2 start $APP_DIR/ecosystem.config.js"
+    su - $APP_USER -c "pm2 save"
+
     local max_attempts=30
     local attempt=1
-    
-    while ! systemctl is-active --quiet codeseek; do
+
+    while ! su - $APP_USER -c "pm2 describe codeseek" >/dev/null 2>&1; do
         if [[ $attempt -ge $max_attempts ]]; then
             error "CodeSeek service failed to start after $max_attempts attempts"
         fi
@@ -991,12 +949,12 @@ start_services() {
         sleep 2
         ((attempt++))
     done
-    
+
     # Test application endpoint
     if ! curl -s --max-time 10 "http://localhost:3000/health" >/dev/null; then
         warning "Application health check failed, but service is running"
     fi
-    
+
     log "CodeSeek service started successfully"
 }
 
@@ -1033,17 +991,17 @@ show_installation_summary() {
     log "   👥 Application User: $APP_USER"
     echo
     log "🔧 Service Management:"
-    log "   Status: systemctl status codeseek"
-    log "   Start:  systemctl start codeseek"
-    log "   Stop:   systemctl stop codeseek"
-    log "   Restart: systemctl restart codeseek"
-    log "   Logs:   journalctl -u codeseek -f"
+    log "   Status: pm2 status codeseek"
+    log "   Start:  sudo -u $APP_USER pm2 start $APP_DIR/ecosystem.config.js"
+    log "   Stop:   sudo -u $APP_USER pm2 stop codeseek"
+    log "   Restart: sudo -u $APP_USER pm2 restart codeseek"
+    log "   Logs:   pm2 logs codeseek"
     echo
     log "📊 System Information:"
     log "   PostgreSQL: $(systemctl is-active postgresql)"
     log "   Redis: $(systemctl is-active redis-server)"
     log "   Nginx: $(systemctl is-active nginx)"
-    log "   CodeSeek: $(systemctl is-active codeseek)"
+    log "   CodeSeek: $(su - $APP_USER -c 'pm2 describe codeseek >/dev/null 2>&1 && echo running || echo stopped')"
     echo
     log "⚠️  Important Notes:"
     log "   1. Ensure your DNS points to this server IP"
@@ -1065,7 +1023,7 @@ show_installation_summary() {
 finalize_installation() {
     log "Finalizing installation..."
     
-    configure_systemd_service
+    configure_pm2
     build_frontend
     start_services
     run_post_install_checks
