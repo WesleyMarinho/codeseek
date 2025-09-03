@@ -136,7 +136,7 @@ if [[ ! "$SSL_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; the
 fi
 
 # Verificar se está rodando como root
-if [ "$EUID" -ne 0 ]; then
+if [ "$(id -u)" -ne 0 ]; then
     error "Este script deve ser executado como root (use sudo)"
     exit 1
 fi
