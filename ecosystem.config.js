@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
-    name: 'digiserver',
+    name: 'codeseek',
     script: 'server.js',
-    cwd: '/opt/digiserver/backend',
+    cwd: '/opt/codeseek/backend',
     instances: 'max',
     exec_mode: 'cluster',
     autorestart: true,
@@ -11,8 +11,8 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
     },
-    error_file: '/var/log/digiserver/error.log',
-    out_file: '/var/log/digiserver/out.log',
+    error_file: '/var/log/codeseek/error.log',
+    out_file: '/var/log/codeseek/out.log',
     merge_logs: true,
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     env_production: {

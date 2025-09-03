@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Script para monitoramento básico do servidor e da aplicação DigiServer
+# Script para monitoramento básico do servidor e da aplicação CodeSeek
 # Recomendado para ser executado via cron a cada 5 minutos
-# Exemplo: */5 * * * * /opt/digiserver/monitor.sh
+# Exemplo: */5 * * * * /opt/codeseek/monitor.sh
 
 # Configurações
-LOG_FILE="/var/log/digiserver/monitor.log"
+LOG_FILE="/var/log/codeseek/monitor.log"
 ALERT_EMAIL="admin@example.com"
 APP_URL="http://localhost:3000/health"
-SERVICE_NAME="digiserver.service"
+SERVICE_NAME="codeseek.service"
 MAX_CPU=90  # Alerta se CPU > 90%
 MAX_MEM=90  # Alerta se memória > 90%
 MAX_DISK=90 # Alerta se disco > 90%
@@ -36,7 +36,7 @@ error() {
     
     # Enviar alerta por email
     if command -v mail &> /dev/null; then
-        echo "$1" | mail -s "[ALERTA] DigiServer - $1" "$ALERT_EMAIL"
+        echo "$1" | mail -s "[ALERTA] CodeSeek - $1" "$ALERT_EMAIL"
     fi
 }
 
@@ -107,7 +107,7 @@ fi
 
 # Verificar conexões de banco de dados
 log "Verificando conexões de banco de dados..."
-DB_CONNECTIONS=$(sudo -u postgres psql -c "SELECT count(*) FROM pg_stat_activity WHERE datname='digiserver_prod';" | sed -n 3p | tr -d ' ')
+DB_CONNECTIONS=$(sudo -u postgres psql -c "SELECT count(*) FROM pg_stat_activity WHERE datname='codeseek_prod';" | sed -n 3p | tr -d ' ')
 
 log "Conexões ativas no banco de dados: $DB_CONNECTIONS"
 

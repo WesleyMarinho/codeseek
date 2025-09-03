@@ -1,7 +1,7 @@
 {
-  "name": "digiserver-frontend",
+  "name": "codeseek-frontend",
   "version": "1.0.0",
-  "description": "Frontend for DigiServer application",
+  "description": "Frontend for CodeSeek application",
   "scripts": {
     "build-css": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.css --watch",
     "build-css-prod": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.css --minify"

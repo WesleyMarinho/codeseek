@@ -1,6 +1,6 @@
-# Guia de Implantação do DigiServer em Produção
+# Guia de Implantação do CodeSeek em Produção
 
-Este documento contém instruções detalhadas para implantar o DigiServer em um servidor Ubuntu em ambiente de produção.
+Este documento contém instruções detalhadas para implantar o CodeSeek em um servidor Ubuntu em ambiente de produção.
 
 ## Requisitos do Sistema
 
@@ -13,7 +13,7 @@ Este documento contém instruções detalhadas para implantar o DigiServer em um
 
 ## Opções de Implantação
 
-Existem duas maneiras de implantar o DigiServer:
+Existem duas maneiras de implantar o CodeSeek:
 
 1. **Instalação Automatizada**: Usando o script de instalação fornecido
 2. **Instalação Manual**: Seguindo o passo a passo detalhado
@@ -26,9 +26,9 @@ O método mais simples é usar o script de instalação automatizado:
 # 1. Faça login no seu servidor via SSH
 ssh root@seu_servidor
 
-# 2. Clone o repositório ou faça upload dos arquivos
-git clone https://github.com/seu-usuario/digiserver.git /tmp/digiserver
-cd /tmp/digiserver
+# 2. Clone o repositório
+git clone https://github.com/WesleyMarinho/codeseek.git /tmp/codeseek
+cd /tmp/codeseek
 
 # 3. Edite as configurações no script de instalação (opcional)
 nano install.sh
@@ -38,7 +38,7 @@ nano install.sh
 sudo bash install.sh
 
 # 5. Verifique se o serviço está rodando
-systemctl status digiserver.service
+systemctl status codeseek.service
 ```
 
 O script realizará todas as etapas necessárias, incluindo:
@@ -77,29 +77,29 @@ npm -v
 ### 2.3. Criar Usuário para a Aplicação
 
 ```bash
-sudo useradd -m -s /bin/bash digiserver
+sudo useradd -m -s /bin/bash codeseek
 ```
 
 ### 2.4. Configurar o Diretório da Aplicação
 
 ```bash
 # Criar diretório da aplicação
-sudo mkdir -p /opt/digiserver
-sudo chown -R digiserver:digiserver /opt/digiserver
+sudo mkdir -p /opt/codeseek
+sudo chown -R codeseek:codeseek /opt/codeseek
 
 # Clonar o repositório
-cd /opt/digiserver
-sudo -u digiserver git clone https://github.com/seu-usuario/digiserver.git .
+cd /opt/codeseek
+sudo -u codeseek git clone https://github.com/WesleyMarinho/codeseek.git .
 ```
 
 ### 2.5. Configurar o Banco de Dados PostgreSQL
 
 ```bash
 # Criar usuário e banco de dados
-sudo -u postgres psql -c "CREATE USER digiserver_user WITH PASSWORD 'senha_segura';"
-sudo -u postgres psql -c "CREATE DATABASE digiserver_prod;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE digiserver_prod TO digiserver_user;"
-sudo -u postgres psql -c "ALTER USER digiserver_user WITH SUPERUSER;"
+sudo -u postgres psql -c "CREATE USER codeseek_user WITH PASSWORD 'senha_segura';"
+sudo -u postgres psql -c "CREATE DATABASE codeseek_prod;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE codeseek_prod TO codeseek_user;"
+sudo -u postgres psql -c "ALTER USER codeseek_user WITH SUPERUSER;"
 ```
 
 ### 2.6. Configurar o Redis
@@ -112,18 +112,18 @@ sudo systemctl restart redis-server
 ### 2.7. Instalar Dependências do Backend
 
 ```bash
-cd /opt/digiserver/backend
-sudo -u digiserver npm install --production
+cd /opt/codeseek/backend
+sudo -u codeseek npm install --production
 ```
 
 ### 2.8. Configurar Variáveis de Ambiente
 
 ```bash
 # Copiar arquivo de exemplo
-sudo -u digiserver cp .env.example .env
+sudo -u codeseek cp .env.example .env
 
 # Editar o arquivo .env
-sudo -u digiserver nano .env
+sudo -u codeseek nano .env
 ```
 
 Atualize as seguintes variáveis no arquivo .env:
@@ -134,8 +134,8 @@ NODE_ENV=production
 
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=digiserver_prod
-DB_USER=digiserver_user
+DB_NAME=codeseek_prod
+DB_USER=codeseek_user
 DB_PASSWORD=senha_segura
 
 REDIS_HOST=localhost
@@ -151,17 +151,17 @@ BASE_URL=https://seu-dominio.com
 
 ```bash
 # Copiar arquivo de configuração
-sudo cp /opt/digiserver/nginx.conf /etc/nginx/sites-available/digiserver
+sudo cp /opt/codeseek/nginx.conf /etc/nginx/sites-available/codeseek
 
 # Editar o arquivo de configuração
-sudo nano /etc/nginx/sites-available/digiserver
+sudo nano /etc/nginx/sites-available/codeseek
 ```
 
 Atualize o `server_name` para o seu domínio.
 
 ```bash
 # Ativar o site
-sudo ln -sf /etc/nginx/sites-available/digiserver /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/codeseek /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 
 # Verificar configuração
@@ -175,42 +175,42 @@ sudo systemctl restart nginx
 
 ```bash
 # Copiar arquivo de serviço
-sudo cp /opt/digiserver/digiserver.service /etc/systemd/system/
+sudo cp /opt/codeseek/codeseek.service /etc/systemd/system/
 
 # Recarregar configurações do systemd
 sudo systemctl daemon-reload
-sudo systemctl enable digiserver.service
+sudo systemctl enable codeseek.service
 ```
 
 ### 2.11. Configurar Diretórios de Uploads
 
 ```bash
-sudo mkdir -p /opt/digiserver/backend/uploads
-sudo chown -R digiserver:digiserver /opt/digiserver/backend/uploads
-sudo chmod -R 755 /opt/digiserver/backend/uploads
+sudo mkdir -p /opt/codeseek/backend/uploads
+sudo chown -R codeseek:codeseek /opt/codeseek/backend/uploads
+sudo chmod -R 755 /opt/codeseek/backend/uploads
 ```
 
 ### 2.12. Inicializar o Banco de Dados
 
 ```bash
-cd /opt/digiserver/backend
-sudo -u digiserver NODE_ENV=production node setup-database.js
-sudo -u digiserver NODE_ENV=production node seed-database.js
+cd /opt/codeseek/backend
+sudo -u codeseek NODE_ENV=production node setup-database.js
+sudo -u codeseek NODE_ENV=production node seed-database.js
 ```
 
 ### 2.13. Compilar Assets do Frontend
 
 ```bash
-cd /opt/digiserver/frontend
-sudo -u digiserver npm install
-sudo -u digiserver npm run build-css-prod
+cd /opt/codeseek/frontend
+sudo -u codeseek npm install
+sudo -u codeseek npm run build-css-prod
 ```
 
 ### 2.14. Iniciar o Serviço
 
 ```bash
-sudo systemctl start digiserver.service
-sudo systemctl status digiserver.service
+sudo systemctl start codeseek.service
+sudo systemctl status codeseek.service
 ```
 
 ## Configuração de SSL/TLS (HTTPS)
@@ -233,21 +233,21 @@ sudo certbot renew --dry-run
 ### Atualizar o Aplicativo
 
 ```bash
-cd /opt/digiserver
-sudo -u digiserver git pull origin main
-cd /opt/digiserver/backend
-sudo -u digiserver npm install --production
-cd /opt/digiserver/frontend
-sudo -u digiserver npm install
-sudo -u digiserver npm run build-css-prod
-sudo systemctl restart digiserver.service
+cd /opt/codeseek
+sudo -u codeseek git pull origin main
+cd /opt/codeseek/backend
+sudo -u codeseek npm install --production
+cd /opt/codeseek/frontend
+sudo -u codeseek npm install
+sudo -u codeseek npm run build-css-prod
+sudo systemctl restart codeseek.service
 ```
 
 ### Monitorar Logs
 
 ```bash
 # Ver logs do serviço
-sudo journalctl -u digiserver.service -f
+sudo journalctl -u codeseek.service -f
 
 # Ver logs do Nginx
 sudo tail -f /var/log/nginx/access.log
@@ -258,10 +258,10 @@ sudo tail -f /var/log/nginx/error.log
 
 ```bash
 # Criar backup
-sudo -u postgres pg_dump digiserver_prod > /tmp/digiserver_backup_$(date +%Y%m%d).sql
+sudo -u postgres pg_dump codeseek_prod > /tmp/codeseek_backup_$(date +%Y%m%d).sql
 
 # Restaurar backup
-sudo -u postgres psql digiserver_prod < backup_file.sql
+sudo -u postgres psql codeseek_prod < backup_file.sql
 ```
 
 ## Solução de Problemas
@@ -269,14 +269,14 @@ sudo -u postgres psql digiserver_prod < backup_file.sql
 ### Verificar Status do Serviço
 
 ```bash
-sudo systemctl status digiserver.service
+sudo systemctl status codeseek.service
 ```
 
 ### Reiniciar Serviços
 
 ```bash
 # Reiniciar aplicação
-sudo systemctl restart digiserver.service
+sudo systemctl restart codeseek.service
 
 # Reiniciar Nginx
 sudo systemctl restart nginx
@@ -292,7 +292,7 @@ sudo systemctl restart redis-server
 
 ```bash
 # Testar conexão com o banco de dados
-sudo -u digiserver psql -h localhost -U digiserver_user -d digiserver_prod
+sudo -u codeseek_user psql -h localhost -U codeseek_user -d codeseek_prod
 
 # Testar conexão com o Redis
 redis-cli ping
@@ -327,7 +327,6 @@ sudo systemctl start fail2ban
 - [Documentação do PostgreSQL](https://www.postgresql.org/docs/)
 - [Documentação do Nginx](https://nginx.org/en/docs/)
 - [Documentação do Redis](https://redis.io/documentation)
-- [Documentação do PM2](https://pm2.keymetrics.io/docs/usage/quick-start/)
 
 ## Suporte
 

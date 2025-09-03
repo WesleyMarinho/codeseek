@@ -2,12 +2,12 @@
 
 # Script para backup automático do banco de dados PostgreSQL
 # Recomendado para ser executado via cron diariamente
-# Exemplo: 0 2 * * * /opt/digiserver/backup-database.sh
+# Exemplo: 0 2 * * * /opt/codeseek/backup-database.sh
 
 # Configurações
-BACKUP_DIR="/opt/digiserver/backups"
-DB_NAME="digiserver_prod"
-DB_USER="digiserver_user"
+BACKUP_DIR="/opt/codeseek/backups"
+DB_NAME="codeseek_prod"
+DB_USER="codeseek_user"
 MAX_BACKUPS=7  # Manter apenas os últimos 7 backups
 
 # Cores para output

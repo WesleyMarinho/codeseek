@@ -42,7 +42,7 @@ async function seedDatabase() {
     
     // Admin user
     const [adminUser] = await User.findOrCreate({
-      where: { email: 'admin@digiserver.com' },
+      where: { email: 'admin@codeseek.com' },
       defaults: { 
         username: 'admin', 
         password: 'admin123456', 
@@ -55,7 +55,7 @@ async function seedDatabase() {
 
     // Test users
     const [testUser] = await User.findOrCreate({
-      where: { email: 'teste@digiserver.com' },
+      where: { email: 'teste@codeseek.com' },
       defaults: { 
         username: 'testuser', 
         password: 'teste123456', 
@@ -67,7 +67,7 @@ async function seedDatabase() {
     });
 
     const [premiumUser] = await User.findOrCreate({
-      where: { email: 'premium@digiserver.com' },
+      where: { email: 'premium@codeseek.com' },
       defaults: { 
         username: 'premiumuser', 
         password: 'premium123456', 
@@ -79,7 +79,7 @@ async function seedDatabase() {
     });
 
     const [demoUser] = await User.findOrCreate({
-      where: { email: 'demo@digiserver.com' },
+      where: { email: 'demo@codeseek.com' },
       defaults: { 
         username: 'demouser', 
         password: 'demo123456', 
@@ -693,7 +693,7 @@ async function seedDatabase() {
           domain: 'mycompany-website.com',
           activatedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
           ipAddress: '192.168.1.100',
-          userAgent: 'DigiServer-Client/1.0.0'
+          userAgent: 'CodeSeek-Client/1.0.0'
         },
         status: 'processed',
         processedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
@@ -850,7 +850,7 @@ async function seedDatabase() {
           </div>
           <p>To continue using this product, please renew your license or consider our All Access subscription.</p>
           <p><a href="\{{renewUrl\}}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Renew License</a></p>
-          <p>Best regards,<br>The DigiServer Pro Team</p>`
+          <p>Best regards,<br>The CodeSeek Pro Team</p>`
       }},
 
       // Security Settings

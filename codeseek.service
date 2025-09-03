@@ -1,17 +1,17 @@
 [Unit]
-Description=DigiServer Application
+Description=CodeSeek Application
 After=network.target postgresql.service redis.service
 
 [Service]
 Type=simple
-User=digiserver
-WorkingDirectory=/opt/digiserver/backend
+User=codeseek
+WorkingDirectory=/opt/codeseek/backend
 ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=10
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=digiserver
+SyslogIdentifier=codeseek
 Environment=NODE_ENV=production
 
 [Install]

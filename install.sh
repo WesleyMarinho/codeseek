@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script de instalação do DigiServer em ambiente de produção
+# Script de instalação do CodeSeek em ambiente de produção
 # Uso: sudo bash install.sh
 
 # Cores para output
@@ -29,9 +29,9 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Configurações
-APP_DIR="/opt/digiserver"
-APP_USER="digiserver"
-GIT_REPO="https://github.com/seu-usuario/digiserver.git"
+APP_DIR="/opt/codeseek"
+APP_USER="codeseek"
+GIT_REPO="https://github.com/WesleyMarinho/codeseek.git"
 DOMAIN="seu-dominio.com"
 
 # 1. Atualizar o sistema
@@ -83,8 +83,8 @@ if [ ! -f "$APP_DIR/backend/.env" ]; then
     sed -i "s/PORT=3000/PORT=3000/" $APP_DIR/backend/.env
     sed -i "s/NODE_ENV=development/NODE_ENV=production/" $APP_DIR/backend/.env
     sed -i "s/DB_HOST=localhost/DB_HOST=localhost/" $APP_DIR/backend/.env
-    sed -i "s/DB_NAME=codeseek_db/DB_NAME=digiserver_prod/" $APP_DIR/backend/.env
-    sed -i "s/DB_USER=postgres/DB_USER=digiserver_user/" $APP_DIR/backend/.env
+    sed -i "s/DB_NAME=codeseek_db/DB_NAME=codeseek_prod/" $APP_DIR/backend/.env
+    sed -i "s/DB_USER=postgres/DB_USER=codeseek_user/" $APP_DIR/backend/.env
     sed -i "s/DB_PASSWORD=sua_senha_aqui/DB_PASSWORD=$(openssl rand -hex 12)/" $APP_DIR/backend/.env
     sed -i "s/REDIS_HOST=localhost/REDIS_HOST=localhost/" $APP_DIR/backend/.env
     sed -i "s/SESSION_SECRET=sua_chave_secreta_muito_forte_aqui/SESSION_SECRET=$SESSION_SECRET/" $APP_DIR/backend/.env
@@ -97,8 +97,8 @@ fi
 
 # 9. Configurar banco de dados PostgreSQL
 log "Configurando banco de dados PostgreSQL..."
-DB_USER="digiserver_user"
-DB_NAME="digiserver_prod"
+DB_USER="codeseek_user"
+DB_NAME="codeseek_prod"
 DB_PASSWORD=$(grep DB_PASSWORD $APP_DIR/backend/.env | cut -d '=' -f2)
 
 # Criar usuário e banco de dados PostgreSQL
@@ -114,18 +114,18 @@ systemctl restart redis-server
 
 # 11. Configurar Nginx
 log "Configurando Nginx..."
-cp $APP_DIR/nginx.conf /etc/nginx/sites-available/digiserver
-sed -i "s/your_domain.com/$DOMAIN/g" /etc/nginx/sites-available/digiserver
-ln -sf /etc/nginx/sites-available/digiserver /etc/nginx/sites-enabled/
+cp $APP_DIR/nginx.conf /etc/nginx/sites-available/codeseek
+sed -i "s/your_domain.com/$DOMAIN/g" /etc/nginx/sites-available/codeseek
+ln -sf /etc/nginx/sites-available/codeseek /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t || error "Configuração do Nginx inválida"
 systemctl restart nginx
 
 # 12. Configurar serviço systemd
 log "Configurando serviço systemd..."
-cp $APP_DIR/digiserver.service /etc/systemd/system/
+cp $APP_DIR/codeseek.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable digiserver.service
+systemctl enable codeseek.service
 
 # 13. Configurar diretórios de uploads
 log "Configurando diretórios de uploads..."
@@ -146,15 +146,15 @@ npm install
 npm run build-css-prod || warning "Falha ao compilar CSS"
 
 # 16. Iniciar o serviço
-log "Iniciando o serviço DigiServer..."
-systemctl start digiserver.service
+log "Iniciando o serviço CodeSeek..."
+systemctl start codeseek.service
 
 # 17. Verificar status
 log "Verificando status do serviço..."
-systemctl status digiserver.service
+systemctl status codeseek.service
 
 log "\n=================================================="
-log "Instalação do DigiServer concluída com sucesso!"
+log "Instalação do CodeSeek concluída com sucesso!"
 log "=================================================="
 log "URL da aplicação: https://$DOMAIN"
 log "Diretório da aplicação: $APP_DIR"
@@ -163,5 +163,5 @@ log "Banco de dados: $DB_NAME"
 log "Usuário do banco: $DB_USER"
 log "Senha do banco: $DB_PASSWORD"
 log "=================================================="
-log "Para verificar os logs: sudo journalctl -u digiserver.service -f"
+log "Para verificar os logs: sudo journalctl -u codeseek.service -f"
 log "=================================================="
