@@ -1,297 +1,1115 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script de instalação interativo do CodeSeek em ambiente de produção
+# CodeSeek V1 - Interactive Installation Script
 # ==============================================================================
-#
-# Este script irá guiá-lo através da instalação e configuração completa
-# da aplicação CodeSeek, incluindo:
-#   - Dependências do sistema (Nginx, PostgreSQL, Node.js, Redis)
-#   - Configuração do banco de dados
-#   - Configuração do serviço (systemd)
-#   - Configuração do Nginx como proxy reverso
-#   - (Opcional) Geração de certificado SSL com Let's Encrypt
-#
-# Uso: sudo bash install.sh
-#
+# Description: Interactive installation and configuration for CodeSeek
+# Author: CodeSeek Team
+# Version: 2.0.0
+# Usage: sudo ./install.sh
 # ==============================================================================
 
-# --- Cores para output ---
+set -euo pipefail
+
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
+
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# --- Funções de Logging ---
+# Default values
+APP_DIR="/opt/codeseek"
+APP_USER="codeseek"
+GIT_REPO="https://github.com/WesleyMarinho/codeseek.git"
+LOG_FILE="/var/log/codeseek-install.log"
+
+# ==============================================================================
+# LOGGING FUNCTIONS
+# ==============================================================================
+
 log() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${GREEN}[INFO]${NC} $message"
+    echo "[$timestamp] [INFO] $message" >> "$LOG_FILE"
 }
 
 error() {
-    echo -e "${RED}[ERRO]${NC} $1"
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${RED}[ERROR]${NC} $message"
+    echo "[$timestamp] [ERROR] $message" >> "$LOG_FILE"
     exit 1
 }
 
 warning() {
-    echo -e "${YELLOW}[AVISO]${NC} $1"
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${YELLOW}[WARN]${NC} $message"
+    echo "[$timestamp] [WARN] $message" >> "$LOG_FILE"
 }
 
 prompt() {
-    echo -e "${BLUE}[INPUT]${NC} $1"
+    local message="$1"
+    echo -e "${BLUE}[INPUT]${NC} $message"
 }
 
-# --- Verificação de Root ---
-if [ "$(id -u)" -ne 0 ]; then
-    error "Este script precisa ser executado como root. Use: sudo bash $0"
-fi
+step() {
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${PURPLE}[STEP]${NC} $message"
+    echo "[$timestamp] [STEP] $message" >> "$LOG_FILE"
+}
 
 # ==============================================================================
-# 1. COLETANDO INFORMAÇÕES DO USUÁRIO
+# UTILITY FUNCTIONS
 # ==============================================================================
 
-clear
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE}  Instalação do CodeSeek - Configuração  ${NC}"
-echo -e "${BLUE}=========================================${NC}"
-echo "Vamos configurar as variáveis para a sua instalação."
-echo "Pressione Enter para usar o valor padrão entre colchetes."
-echo ""
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-# --- Domínio da Aplicação ---
-prompt "Digite o domínio para a aplicação (ex: codeseek.meudominio.com):"
-while [[ -z "$DOMAIN" ]]; do
-    read -p "> " DOMAIN
-    if [[ -z "$DOMAIN" ]]; then
-        echo -e "${YELLOW}O domínio não pode ser vazio.${NC}"
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root (use sudo)"
     fi
-done
+}
 
-# --- Configurações do Banco de Dados ---
-prompt "Digite o nome do banco de dados de produção [codeseek_prod]:"
-read -p "> " DB_NAME
-DB_NAME=${DB_NAME:-codeseek_prod}
+check_os() {
+    if [[ ! -f /etc/os-release ]]; then
+        error "Cannot determine OS version"
+    fi
+    
+    . /etc/os-release
+    if [[ "$ID" != "ubuntu" ]] && [[ "$ID" != "debian" ]]; then
+        error "This script only supports Ubuntu and Debian"
+    fi
+    
+    log "Detected OS: $PRETTY_NAME"
+}
 
-prompt "Digite o nome de usuário para o banco de dados [codeseek_user]:"
-read -p "> " DB_USER
-DB_USER=${DB_USER:-codeseek_user}
+validate_domain() {
+    local domain="$1"
+    if [[ ! "$domain" =~ ^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$ ]]; then
+        return 1
+    fi
+    return 0
+}
 
-# --- Configuração de SSL com Let's Encrypt ---
-prompt "Deseja configurar um certificado SSL gratuito com Let's Encrypt (Certbot)? (s/n) [s]:"
-read -p "> " SETUP_SSL
-SETUP_SSL=${SETUP_SSL:-s}
+validate_email() {
+    local email="$1"
+    if [[ ! "$email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+        return 1
+    fi
+    return 0
+}
 
-if [[ "$SETUP_SSL" =~ ^[Ss]$ ]]; then
-    prompt "Digite um e-mail para o registro do certificado SSL (ex: admin@meudominio.com):"
-    while [[ -z "$SSL_EMAIL" ]]; do
-        read -p "> " SSL_EMAIL
-        if [[ -z "$SSL_EMAIL" ]]; then
-            echo -e "${YELLOW}O e-mail é necessário para o Let's Encrypt.${NC}"
+# ==============================================================================
+# INITIALIZATION
+# ==============================================================================
+
+# Check prerequisites
+check_root
+check_os
+
+# Create log file
+mkdir -p "$(dirname "$LOG_FILE")"
+touch "$LOG_FILE"
+
+log "Starting CodeSeek installation..."
+
+# ==============================================================================
+# USER INPUT COLLECTION
+# ==============================================================================
+
+collect_user_input() {
+    clear
+    echo -e "${BLUE}=========================================${NC}"
+    echo -e "${BLUE}  CodeSeek Installation - Configuration  ${NC}"
+    echo -e "${BLUE}=========================================${NC}"
+    echo "Let's configure the variables for your installation."
+    echo "Press Enter to use the default value in brackets."
+    echo ""
+    
+    # --- Application Domain ---
+    while true; do
+        prompt "Enter the domain for the application (e.g., codeseek.mydomain.com):"
+        read -p "> " DOMAIN
+        if [[ -n "$DOMAIN" ]]; then
+            if validate_domain "$DOMAIN"; then
+                break
+            else
+                warning "Invalid domain format. Please enter a valid domain."
+            fi
+        else
+            warning "Domain cannot be empty."
         fi
     done
-    APP_URL="https://$DOMAIN"
-else
-    APP_URL="http://$DOMAIN"
-    warning "A instalação prosseguirá sem HTTPS. É altamente recomendável usar SSL em produção."
-fi
+    
+    # --- Database Configuration ---
+    while true; do
+        prompt "Enter the production database name [codeseek_prod]:"
+        read -p "> " DB_NAME
+        DB_NAME=${DB_NAME:-codeseek_prod}
+        if [[ "$DB_NAME" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
+            break
+        else
+            warning "Invalid database name. Use only letters, numbers, and underscores (must start with letter)."
+        fi
+    done
+    
+    while true; do
+        prompt "Enter the database username [codeseek_user]:"
+        read -p "> " DB_USER
+        DB_USER=${DB_USER:-codeseek_user}
+        if [[ "$DB_USER" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
+            break
+        else
+            warning "Invalid username. Use only letters, numbers, and underscores (must start with letter)."
+        fi
+    done
+    
+    # --- SSL Configuration with Let's Encrypt ---
+    while true; do
+        prompt "Do you want to configure a free SSL certificate with Let's Encrypt (Certbot)? (y/n) [y]:"
+        read -p "> " SETUP_SSL
+        SETUP_SSL=${SETUP_SSL:-y}
+        case $SETUP_SSL in
+            [Yy]* )
+                while true; do
+                    prompt "Enter an email for SSL certificate registration (e.g., admin@mydomain.com):"
+                    read -p "> " SSL_EMAIL
+                    if [[ -n "$SSL_EMAIL" ]]; then
+                        if validate_email "$SSL_EMAIL"; then
+                            break
+                        else
+                            warning "Invalid email format. Please enter a valid email."
+                        fi
+                    else
+                        warning "Email is required for Let's Encrypt."
+                    fi
+                done
+                APP_URL="https://$DOMAIN"
+                break
+                ;;
+            [Nn]* )
+                APP_URL="http://$DOMAIN"
+                warning "Installation will proceed without HTTPS. SSL is highly recommended for production."
+                break
+                ;;
+            * )
+                warning "Please answer with 'y' for yes or 'n' for no."
+                ;;
+        esac
+    done
+    
+    # Generate secure passwords and secrets
+    DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+    JWT_SECRET=$(openssl rand -base64 64 | tr -d "=+/" | cut -c1-64)
+    SESSION_SECRET=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    
+    log "Configuration collected successfully."
+}
 
-
-# --- Resumo e Confirmação ---
-echo -e "\n${YELLOW}================== RESUMO DA CONFIGURAÇÃO ==================${NC}"
-echo -e "Domínio da Aplicação:   ${GREEN}$DOMAIN${NC}"
-echo -e "URL Final:              ${GREEN}$APP_URL${NC}"
-echo -e "Usuário do Sistema:     ${GREEN}codeseek${NC}"
-echo -e "Diretório da Aplicação: ${GREEN}/opt/codeseek${NC}"
-echo -e "Nome do Banco de Dados: ${GREEN}$DB_NAME${NC}"
-echo -e "Usuário do Banco:       ${GREEN}$DB_USER${NC}"
-if [[ "$SETUP_SSL" =~ ^[Ss]$ ]]; then
-    echo -e "Configurar SSL:         ${GREEN}Sim (com o e-mail: $SSL_EMAIL)${NC}"
-else
-    echo -e "Configurar SSL:         ${RED}Não${NC}"
-fi
-echo -e "${YELLOW}============================================================${NC}\n"
-
-prompt "As configurações acima estão corretas? (s/n)"
-read -p "> " CONFIRM
-if [[ ! "$CONFIRM" =~ ^[Ss]$ ]]; then
-    error "Instalação cancelada pelo usuário."
-fi
+# Call the function to collect user input
+collect_user_input
 
 
 # ==============================================================================
-# 2. EXECUÇÃO DA INSTALAÇÃO
+# CONFIGURATION SUMMARY
 # ==============================================================================
 
-# --- Configurações Fixas ---
-APP_DIR="/opt/codeseek"
-APP_USER="codeseek"
-GIT_REPO="https://github.com/WesleyMarinho/codeseek.git"
+show_configuration_summary() {
+    echo -e "\n${YELLOW}=== Configuration Summary ===${NC}\n"
+    echo "Domain: $DOMAIN"
+    echo "SSL: $([ "$SETUP_SSL" = "y" ] && echo "Enabled" || echo "Disabled")"
+    echo "Database: $DB_NAME"
+    echo "Database User: $DB_USER"
+    echo "Application Directory: $APP_DIR"
+    echo "Application User: $APP_USER"
+    echo "Git Repository: $GIT_REPO"
+    
+    echo -e "\n${BLUE}Press Enter to continue or Ctrl+C to cancel...${NC}"
+    read
+    
+    log "Configuration confirmed by user."
+}
 
-# 1. Atualizar o sistema
-log "Atualizando o sistema..."
-apt update && apt upgrade -y || error "Falha ao atualizar o sistema"
+# Show configuration summary
+show_configuration_summary
 
-# 2. Instalar dependências
-log "Instalando dependências..."
-DEPS="git curl wget nginx postgresql postgresql-contrib redis-server build-essential python3 python3-pip"
-if [[ "$SETUP_SSL" =~ ^[Ss]$ ]]; then
-    DEPS="$DEPS certbot python3-certbot-nginx"
-fi
-apt install -y $DEPS || error "Falha ao instalar dependências"
+# ==============================================================================
+# INSTALLATION FUNCTIONS
+# ==============================================================================
 
-# 3. Instalar Node.js 18.x
-log "Instalando Node.js 18.x..."
-if ! command -v node &> /dev/null || [[ $(node -v | cut -d'v' -f2 | cut -d'.' -f1) -ne 18 ]]; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - || error "Falha ao configurar repositório do Node.js"
-    apt-get install -y nodejs || error "Falha ao instalar Node.js"
-else
-    log "Node.js v18.x ou superior já está instalado."
-fi
-node -v
-npm -v
+update_system() {
+    step "Updating system packages..."
+    if ! apt update && apt upgrade -y; then
+        error "Failed to update system packages"
+    fi
+    log "System updated successfully"
+}
 
-# 4. Criar usuário para a aplicação
-log "Criando usuário do sistema '$APP_USER'..."
-if ! id -u $APP_USER &>/dev/null; then
-    useradd -m -s /bin/bash $APP_USER || error "Falha ao criar usuário $APP_USER"
-else
-    log "Usuário '$APP_USER' já existe."
-fi
+install_dependencies() {
+    step "Installing basic dependencies..."
+    local packages=(
+        "curl"
+        "wget"
+        "gnupg2"
+        "software-properties-common"
+        "apt-transport-https"
+        "ca-certificates"
+        "lsb-release"
+        "unzip"
+        "git"
+    )
+    
+    if ! apt install -y "${packages[@]}"; then
+        error "Failed to install basic dependencies"
+    fi
+    log "Basic dependencies installed successfully"
+}
 
-# 5. Criar diretório da aplicação
-log "Criando diretório da aplicação em '$APP_DIR'..."
-mkdir -p $APP_DIR
-chown -R $APP_USER:$APP_USER $APP_DIR
+install_nodejs() {
+    step "Installing Node.js 18.x..."
+    
+    # Add NodeSource repository
+    if ! curl -fsSL https://deb.nodesource.com/setup_18.x | bash -; then
+        error "Failed to add NodeSource repository"
+    fi
+    
+    # Install Node.js
+    if ! apt install -y nodejs; then
+        error "Failed to install Node.js"
+    fi
+    
+    # Verify installation
+    local node_version=$(node --version 2>/dev/null || echo "not found")
+    local npm_version=$(npm --version 2>/dev/null || echo "not found")
+    
+    if [[ "$node_version" == "not found" ]] || [[ "$npm_version" == "not found" ]]; then
+        error "Node.js or npm installation verification failed"
+    fi
+    
+    log "Node.js $node_version and npm $npm_version installed successfully"
+}
 
-# 6. Clonar o repositório
-log "Clonando o repositório..."
-if [ -d "$APP_DIR/.git" ]; then
-    warning "O diretório '$APP_DIR' já contém um repositório git. Pulando a clonagem."
-else
-    sudo -u $APP_USER git clone $GIT_REPO $APP_DIR || error "Falha ao clonar o repositório"
-fi
-chown -R $APP_USER:$APP_USER $APP_DIR
+install_postgresql() {
+    step "Installing PostgreSQL..."
+    
+    if ! apt install -y postgresql postgresql-contrib; then
+        error "Failed to install PostgreSQL"
+    fi
+    
+    # Start and enable PostgreSQL
+    if ! systemctl start postgresql || ! systemctl enable postgresql; then
+        error "Failed to start PostgreSQL service"
+    fi
+    
+    log "PostgreSQL installed and started successfully"
+}
 
-# 7. Instalar dependências do backend
-log "Instalando dependências do backend (npm install)..."
-cd $APP_DIR/backend
-sudo -u $APP_USER npm install --production || error "Falha ao instalar dependências do backend"
+install_redis() {
+    step "Installing Redis..."
+    
+    if ! apt install -y redis-server; then
+        error "Failed to install Redis"
+    fi
+    
+    # Configure Redis to start on boot
+    if ! systemctl enable redis-server; then
+        warning "Failed to enable Redis service"
+    fi
+    
+    log "Redis installed successfully"
+}
 
-# 8. Configurar variáveis de ambiente (.env)
-log "Configurando variáveis de ambiente (.env)..."
-ENV_FILE="$APP_DIR/backend/.env"
-if [ ! -f "$ENV_FILE" ]; then
-    cp "$APP_DIR/backend/.env.example" "$ENV_FILE"
+install_nginx() {
+    step "Installing Nginx..."
+    
+    if ! apt install -y nginx; then
+        error "Failed to install Nginx"
+    fi
+    
+    # Start and enable Nginx
+    if ! systemctl start nginx || ! systemctl enable nginx; then
+        error "Failed to start Nginx service"
+    fi
+    
+    log "Nginx installed and started successfully"
+}
 
-    # Gerar senhas e segredos
-    DB_PASSWORD=$(openssl rand -hex 16)
-    SESSION_SECRET=$(openssl rand -hex 32)
+install_certbot() {
+    if [[ "$SETUP_SSL" == "y" ]]; then
+        step "Installing Certbot for SSL certificates..."
+        
+        if ! apt install -y certbot python3-certbot-nginx; then
+            error "Failed to install Certbot"
+        fi
+        
+        log "Certbot installed successfully"
+    fi
+}
 
-    # Atualizar variáveis no arquivo .env
-    sed -i "s/PORT=3000/PORT=3000/" "$ENV_FILE"
-    sed -i "s/NODE_ENV=development/NODE_ENV=production/" "$ENV_FILE"
-    sed -i "s/DB_HOST=localhost/DB_HOST=localhost/" "$ENV_FILE"
-    sed -i "s/DB_NAME=codeseek_db/DB_NAME=$DB_NAME/" "$ENV_FILE"
-    sed -i "s/DB_USER=postgres/DB_USER=$DB_USER/" "$ENV_FILE"
-    sed -i "s/DB_PASSWORD=sua_senha_aqui/DB_PASSWORD=$DB_PASSWORD/" "$ENV_FILE"
-    sed -i "s/REDIS_HOST=localhost/REDIS_HOST=localhost/" "$ENV_FILE"
-    sed -i "s/SESSION_SECRET=sua_chave_secreta_muito_forte_aqui/SESSION_SECRET=$SESSION_SECRET/" "$ENV_FILE"
-    sed -i "s|BASE_URL=http://localhost:3000|BASE_URL=$APP_URL|" "$ENV_FILE"
+install_additional_packages() {
+    step "Installing additional required packages..."
+    
+    local packages=(
+        "build-essential"
+        "python3"
+        "python3-pip"
+    )
+    
+    if ! apt install -y "${packages[@]}"; then
+        error "Failed to install additional packages"
+    fi
+    
+    log "Additional packages installed successfully"
+}
 
-    chown $APP_USER:$APP_USER "$ENV_FILE"
-    chmod 600 "$ENV_FILE" # Permissões restritas para o arquivo .env
-else
-    warning "Arquivo .env já existe. Pulando a configuração automática."
-fi
-DB_PASSWORD=$(grep DB_PASSWORD $ENV_FILE | cut -d '=' -f2) # Carrega a senha para usar abaixo
+# ==============================================================================
+# INSTALLATION EXECUTION
+# ==============================================================================
 
-# 9. Configurar banco de dados PostgreSQL
-log "Configurando banco de dados PostgreSQL..."
-# Verificar se o usuário existe
-if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
-    warning "Usuário do banco '$DB_USER' já existe."
-else
-    log "Criando usuário do banco '$DB_USER'..."
-    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" || error "Falha ao criar usuário do banco."
-fi
-# Verificar se o banco de dados existe
-if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
-    warning "Banco de dados '$DB_NAME' já existe."
-else
-    log "Criando banco de dados '$DB_NAME'..."
-    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" || error "Falha ao criar banco de dados."
-fi
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+run_installation() {
+    log "Starting installation process..."
+    
+    update_system
+    install_dependencies
+    install_nodejs
+    install_postgresql
+    install_redis
+    install_nginx
+    install_certbot
+    install_additional_packages
+    
+    log "All system dependencies installed successfully"
+}
 
-# 10. Configurar Redis
-log "Configurando Redis..."
-systemctl enable --now redis-server || error "Falha ao iniciar ou habilitar o Redis"
+# Execute installation
+run_installation
 
-# 11. Configurar Nginx
-log "Configurando Nginx para o domínio $DOMAIN..."
-NGINX_CONF="/etc/nginx/sites-available/codeseek"
-cp $APP_DIR/nginx.conf $NGINX_CONF
-sed -i "s/your_domain.com/$DOMAIN/g" $NGINX_CONF
-ln -sf $NGINX_CONF /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t || error "Configuração do Nginx inválida. Verifique o arquivo $NGINX_CONF"
-systemctl restart nginx
+# ==============================================================================
+# APPLICATION SETUP FUNCTIONS
+# ==============================================================================
 
-# 12. Configurar SSL com Certbot (se selecionado)
-if [[ "$SETUP_SSL" =~ ^[Ss]$ ]]; then
-    log "Configurando certificado SSL com Certbot..."
-    certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m "$SSL_EMAIL" --redirect || error "Falha ao gerar o certificado SSL. Verifique se o DNS do seu domínio aponta para este servidor."
-    log "Certificado SSL configurado com sucesso."
-fi
+create_app_user() {
+    step "Creating application user: $APP_USER..."
+    
+    if ! id "$APP_USER" &>/dev/null; then
+        if ! useradd -r -s /bin/bash -d "$APP_DIR" "$APP_USER"; then
+            error "Failed to create user $APP_USER"
+        fi
+        log "User $APP_USER created successfully"
+    else
+        log "User $APP_USER already exists"
+    fi
+}
 
-# 13. Configurar serviço systemd
-log "Configurando serviço systemd..."
-sed -i "s/User=codeseek/User=$APP_USER/" $APP_DIR/codeseek.service
-sed -i "s|WorkingDirectory=/opt/codeseek/backend|WorkingDirectory=$APP_DIR/backend|" $APP_DIR/codeseek.service
-cp $APP_DIR/codeseek.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable codeseek.service
+setup_app_directory() {
+    step "Setting up application directory..."
+    
+    # Create application directory
+    if ! mkdir -p "$APP_DIR"; then
+        error "Failed to create directory $APP_DIR"
+    fi
+    
+    # Set ownership
+    if ! chown "$APP_USER:$APP_USER" "$APP_DIR"; then
+        error "Failed to set directory ownership"
+    fi
+    
+    # Set permissions
+    if ! chmod 755 "$APP_DIR"; then
+        error "Failed to set directory permissions"
+    fi
+    
+    log "Application directory setup completed"
+}
 
-# 14. Configurar diretórios de uploads
-log "Configurando diretório de uploads..."
-mkdir -p $APP_DIR/backend/uploads
-chown -R $APP_USER:$APP_USER $APP_DIR/backend/uploads
-chmod -R 755 $APP_DIR/backend/uploads
+clone_repository() {
+    step "Cloning application repository..."
+    
+    cd "$APP_DIR" || error "Failed to access directory $APP_DIR"
+    
+    if [[ -d ".git" ]]; then
+        log "Repository already exists. Updating..."
+        if ! sudo -u "$APP_USER" git pull; then
+            warning "Failed to update repository, continuing with existing code"
+        fi
+    else
+        if ! sudo -u "$APP_USER" git clone "$GIT_REPO" .; then
+            error "Failed to clone repository from $GIT_REPO"
+        fi
+        log "Repository cloned successfully"
+    fi
+}
 
-# 15. Inicializar o banco de dados
-log "Inicializando o banco de dados (schema e seeds)..."
-cd $APP_DIR/backend
-sudo -u $APP_USER NODE_ENV=production node setup-database.js || error "Falha ao configurar o schema do banco de dados"
-sudo -u $APP_USER NODE_ENV=production node seed-database.js || warning "Falha ao popular o banco de dados com dados iniciais (pode não ser um erro se já foi executado)"
+install_backend_dependencies() {
+    step "Installing backend dependencies..."
+    
+    cd "$APP_DIR/backend" || error "Failed to access backend directory"
+    
+    # Check if package.json exists
+    if [[ ! -f "package.json" ]]; then
+        error "package.json not found in $APP_DIR/backend"
+    fi
+    
+    # Install dependencies as app user
+    if ! sudo -u "$APP_USER" npm install --production; then
+        error "Failed to install backend dependencies"
+    fi
+    
+    log "Backend dependencies installed successfully"
+}
 
-# 16. Compilar assets do frontend
-log "Compilando assets do frontend..."
-cd $APP_DIR/frontend
-# Precisamos instalar as dependências de desenvolvimento para compilar
-sudo -u $APP_USER npm install
-sudo -u $APP_USER npm run build-css-prod || warning "Falha ao compilar CSS do frontend"
-# Removemos as dependências de desenvolvimento após a compilação
-sudo -u $APP_USER npm prune --production
+# ==============================================================================
+# APPLICATION SETUP EXECUTION
+# ==============================================================================
 
-# 17. Iniciar o serviço
-log "Iniciando o serviço CodeSeek..."
-systemctl start codeseek.service
+setup_application() {
+    log "Setting up CodeSeek application..."
+    
+    create_app_user
+    setup_app_directory
+    clone_repository
+    install_backend_dependencies
+    
+    log "Application setup completed successfully"
+}
 
-# --- Finalização ---
-log "Aguardando o serviço iniciar..."
-sleep 5
-systemctl status codeseek.service --no-pager
+# Execute application setup
+setup_application
 
-echo -e "\n${GREEN}=================================================="
-echo -e "  Instalação do CodeSeek concluída com sucesso! "
-echo -e "==================================================${NC}"
-echo -e "URL da aplicação:   ${BLUE}$APP_URL${NC}"
-echo -e "Diretório:          ${BLUE}$APP_DIR${NC}"
-echo -e "Usuário do Sistema:   ${BLUE}$APP_USER${NC}"
-echo -e "Banco de Dados:     ${BLUE}$DB_NAME${NC}"
-echo -e "Usuário do Banco:     ${BLUE}$DB_USER${NC}"
-echo -e "Senha do Banco:       ${YELLOW}$DB_PASSWORD${NC} (guarde em local seguro!)"
-echo -e "${GREEN}==================================================${NC}"
-echo -e "Para verificar os logs em tempo real, use:"
-echo -e "${YELLOW}sudo journalctl -u codeseek.service -f${NC}"
-echo -e "${GREEN}==================================================${NC}"
+# ==============================================================================
+# ENVIRONMENT CONFIGURATION FUNCTIONS
+# ==============================================================================
+
+configure_environment() {
+    step "Configuring environment variables..."
+    
+    local env_file="$APP_DIR/backend/.env"
+    
+    # Create .env file
+    cat > "$env_file" << EOF
+# ==============================================================================
+# CodeSeek V1 - Production Environment Configuration
+# ==============================================================================
+# Generated on: $(date)
+# Domain: $DOMAIN
+# ==============================================================================
+
+# Application Settings
+NODE_ENV=production
+PORT=3000
+APP_URL=$APP_URL
+APP_NAME=CodeSeek
+APP_VERSION=1.0.0
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=$DB_NAME
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
+DB_SSL=false
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+
+# Security Configuration
+JWT_SECRET=$JWT_SECRET
+JWT_EXPIRES_IN=24h
+SESSION_SECRET=$SESSION_SECRET
+SESSION_MAX_AGE=86400000
+BCRYPT_ROUNDS=12
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# File Upload Configuration
+UPLOAD_PATH=$APP_DIR/uploads
+MAX_FILE_SIZE=10485760
+ALLOWED_FILE_TYPES=jpg,jpeg,png,gif,pdf,doc,docx,txt,zip
+
+# Email Configuration (configure as needed)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=noreply@$DOMAIN
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FILE=$APP_DIR/logs/app.log
+LOG_MAX_SIZE=10m
+LOG_MAX_FILES=5
+
+# Rate Limiting
+RATE_LIMIT_WINDOW=900000
+RATE_LIMIT_MAX=100
+
+# CORS Configuration
+CORS_ORIGIN=$APP_URL
+CORS_CREDENTIALS=true
+EOF
+    
+    # Set proper permissions
+    if ! chown "$APP_USER:$APP_USER" "$env_file"; then
+        error "Failed to set ownership of .env file"
+    fi
+    
+    if ! chmod 600 "$env_file"; then
+        error "Failed to set permissions of .env file"
+    fi
+    
+    log "Environment configuration completed"
+}
+
+create_directories() {
+    step "Creating application directories..."
+    
+    local directories=(
+        "$APP_DIR/uploads"
+        "$APP_DIR/logs"
+        "$APP_DIR/tmp"
+        "$APP_DIR/backups"
+    )
+    
+    for dir in "${directories[@]}"; do
+        if ! mkdir -p "$dir"; then
+            error "Failed to create directory: $dir"
+        fi
+        
+        if ! chown "$APP_USER:$APP_USER" "$dir"; then
+            error "Failed to set ownership of directory: $dir"
+        fi
+        
+        if ! chmod 755 "$dir"; then
+            error "Failed to set permissions of directory: $dir"
+        fi
+    done
+    
+    log "Application directories created successfully"
+}
+
+# Execute environment configuration
+configure_environment
+create_directories
+
+# ==============================================================================
+# DATABASE CONFIGURATION FUNCTIONS
+# ==============================================================================
+
+configure_postgresql() {
+    step "Configuring PostgreSQL database..."
+    
+    # Wait for PostgreSQL to be ready
+    local max_attempts=30
+    local attempt=1
+    
+    while ! sudo -u postgres psql -c "SELECT 1;" >/dev/null 2>&1; do
+        if [[ $attempt -ge $max_attempts ]]; then
+            error "PostgreSQL is not responding after $max_attempts attempts"
+        fi
+        log "Waiting for PostgreSQL to be ready... (attempt $attempt/$max_attempts)"
+        sleep 2
+        ((attempt++))
+    done
+    
+    # Create database user
+    if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
+        log "Database user '$DB_USER' already exists"
+    else
+        if ! sudo -u postgres createuser --createdb --no-superuser --no-createrole "$DB_USER"; then
+            error "Failed to create database user '$DB_USER'"
+        fi
+        log "Database user '$DB_USER' created successfully"
+    fi
+    
+    # Set user password
+    if ! sudo -u postgres psql -c "ALTER USER $DB_USER PASSWORD '$DB_PASSWORD';"; then
+        error "Failed to set password for database user '$DB_USER'"
+    fi
+    
+    # Create database
+    if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+        log "Database '$DB_NAME' already exists"
+    else
+        if ! sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"; then
+            error "Failed to create database '$DB_NAME'"
+        fi
+        log "Database '$DB_NAME' created successfully"
+    fi
+    
+    # Grant privileges
+    if ! sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"; then
+        warning "Failed to grant privileges, but continuing..."
+    fi
+    
+    log "PostgreSQL configuration completed"
+}
+
+configure_redis() {
+    step "Configuring Redis..."
+    
+    # Configure Redis for production
+    local redis_conf="/etc/redis/redis.conf"
+    
+    if [[ -f "$redis_conf" ]]; then
+        # Backup original configuration
+        if [[ ! -f "$redis_conf.backup" ]]; then
+            cp "$redis_conf" "$redis_conf.backup"
+        fi
+        
+        # Configure Redis settings
+        sed -i 's/^# maxmemory <bytes>/maxmemory 256mb/' "$redis_conf"
+        sed -i 's/^# maxmemory-policy noeviction/maxmemory-policy allkeys-lru/' "$redis_conf"
+        sed -i 's/^save /# save /' "$redis_conf"  # Disable automatic saves
+        
+        log "Redis configuration updated"
+    fi
+    
+    # Start and enable Redis
+    if ! systemctl enable redis-server; then
+        error "Failed to enable Redis service"
+    fi
+    
+    if ! systemctl start redis-server; then
+        error "Failed to start Redis service"
+    fi
+    
+    # Verify Redis is running
+    if ! systemctl is-active --quiet redis-server; then
+        error "Redis service is not running"
+    fi
+    
+    # Test Redis connection
+    if ! redis-cli ping >/dev/null 2>&1; then
+        error "Cannot connect to Redis"
+    fi
+    
+    log "Redis configured and running successfully"
+}
+
+run_database_migrations() {
+    step "Running database migrations..."
+    
+    cd "$APP_DIR/backend" || error "Failed to access backend directory"
+    
+    # Check if migration scripts exist
+    if [[ -f "package.json" ]] && grep -q "migrate" package.json; then
+        if ! sudo -u "$APP_USER" npm run migrate; then
+            warning "Database migration failed, but continuing..."
+        else
+            log "Database migrations completed successfully"
+        fi
+    elif [[ -d "migrations" ]] || [[ -d "database/migrations" ]]; then
+        log "Migration directory found but no npm script. Manual migration may be required."
+    else
+        log "No migration scripts found, skipping..."
+    fi
+}
+
+# ==============================================================================
+# DATABASE SETUP EXECUTION
+# ==============================================================================
+
+setup_database() {
+    log "Setting up database services..."
+    
+    configure_postgresql
+    configure_redis
+    run_database_migrations
+    
+    log "Database setup completed successfully"
+}
+
+# Execute database setup
+setup_database
+
+# ==============================================================================
+# NGINX CONFIGURATION FUNCTIONS
+# ==============================================================================
+
+configure_nginx() {
+    step "Configuring Nginx reverse proxy..."
+    
+    local nginx_config="/etc/nginx/sites-available/codeseek"
+    local nginx_enabled="/etc/nginx/sites-enabled/codeseek"
+    
+    # Remove default Nginx site
+    if [[ -f "/etc/nginx/sites-enabled/default" ]]; then
+        rm -f "/etc/nginx/sites-enabled/default"
+        log "Removed default Nginx site"
+    fi
+    
+    # Create Nginx configuration
+    cat > "$nginx_config" << EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+    
+    # Security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Referrer-Policy strict-origin-when-cross-origin;
+    
+    # Rate limiting
+    limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req_zone \$binary_remote_addr zone=login:10m rate=1r/s;
+    
+    # Main application
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+    
+    # API rate limiting
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    # Login rate limiting
+    location /api/auth/login {
+        limit_req zone=login burst=5 nodelay;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    # Static files
+    location /uploads/ {
+        alias $APP_DIR/uploads/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Health check
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
+    
+    # Enable the site
+    ln -sf "$nginx_config" "$nginx_enabled"
+    
+    # Test Nginx configuration
+    if ! nginx -t; then
+        error "Invalid Nginx configuration"
+    fi
+    
+    # Reload Nginx
+    if ! systemctl reload nginx; then
+        error "Failed to reload Nginx"
+    fi
+    
+    log "Nginx configured successfully"
+}
+
+configure_ssl() {
+    if [[ "$SETUP_SSL" != "y" ]]; then
+        log "SSL setup skipped"
+        return 0
+    fi
+    
+    step "Configuring SSL with Let's Encrypt..."
+    
+    # Verify domain is accessible
+    if ! curl -s --max-time 10 "http://$DOMAIN/health" >/dev/null; then
+        warning "Domain $DOMAIN is not accessible. SSL setup may fail."
+        read -p "Continue with SSL setup? (y/N): " -r continue_ssl
+        if [[ ! "$continue_ssl" =~ ^[Yy]$ ]]; then
+            log "SSL setup skipped by user"
+            return 0
+        fi
+    fi
+    
+    # Request SSL certificate
+    if ! certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
+        error "Failed to obtain SSL certificate. Please check domain configuration."
+    fi
+    
+    # Set up automatic renewal
+    if ! crontab -l 2>/dev/null | grep -q "certbot renew"; then
+        (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
+        log "SSL certificate auto-renewal configured"
+    fi
+    
+    log "SSL configured successfully"
+}
+
+# ==============================================================================
+# WEB SERVER SETUP EXECUTION
+# ==============================================================================
+
+setup_webserver() {
+    log "Setting up web server..."
+    
+    configure_nginx
+    configure_ssl
+    
+    log "Web server setup completed successfully"
+}
+
+# Execute web server setup
+setup_webserver
+
+# ==============================================================================
+# SYSTEMD SERVICE CONFIGURATION
+# ==============================================================================
+
+configure_systemd_service() {
+    step "Configuring systemd service..."
+    
+    local service_file="/etc/systemd/system/codeseek.service"
+    
+    cat > "$service_file" << EOF
+[Unit]
+Description=CodeSeek Application Server
+Documentation=https://github.com/codeseek/codeseek
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+Requires=network.target
+
+[Service]
+Type=simple
+User=$APP_USER
+Group=$APP_USER
+WorkingDirectory=$APP_DIR/backend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=$APP_DIR/backend/.env
+ExecStart=/usr/bin/node server.js
+ExecReload=/bin/kill -HUP \$MAINPID
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=20
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=$APP_DIR
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=codeseek
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Reload systemd and enable service
+    if ! systemctl daemon-reload; then
+        error "Failed to reload systemd daemon"
+    fi
+    
+    if ! systemctl enable codeseek; then
+        error "Failed to enable CodeSeek service"
+    fi
+    
+    log "Systemd service configured successfully"
+}
+
+build_frontend() {
+    step "Building frontend application..."
+    
+    cd "$APP_DIR/frontend" || error "Frontend directory not found"
+    
+    # Install frontend dependencies
+    if ! sudo -u "$APP_USER" npm ci --production; then
+        error "Failed to install frontend dependencies"
+    fi
+    
+    # Build frontend
+    if ! sudo -u "$APP_USER" npm run build; then
+        error "Failed to build frontend"
+    fi
+    
+    log "Frontend built successfully"
+}
+
+start_services() {
+    step "Starting CodeSeek services..."
+    
+    # Start CodeSeek service
+    if ! systemctl start codeseek; then
+        error "Failed to start CodeSeek service"
+    fi
+    
+    # Wait for service to be ready
+    local max_attempts=30
+    local attempt=1
+    
+    while ! systemctl is-active --quiet codeseek; do
+        if [[ $attempt -ge $max_attempts ]]; then
+            error "CodeSeek service failed to start after $max_attempts attempts"
+        fi
+        log "Waiting for CodeSeek service to start... (attempt $attempt/$max_attempts)"
+        sleep 2
+        ((attempt++))
+    done
+    
+    # Test application endpoint
+    if ! curl -s --max-time 10 "http://localhost:3000/health" >/dev/null; then
+        warning "Application health check failed, but service is running"
+    fi
+    
+    log "CodeSeek service started successfully"
+}
+
+run_post_install_checks() {
+    step "Running post-installation checks..."
+    
+    local check_script="$APP_DIR/post-install-check.sh"
+    
+    if [[ -f "$check_script" ]]; then
+        if ! bash "$check_script"; then
+            warning "Post-installation checks found some issues. Please review the output above."
+        else
+            log "All post-installation checks passed"
+        fi
+    else
+        log "Post-installation check script not found, skipping..."
+    fi
+}
+
+show_installation_summary() {
+    local ssl_protocol="http"
+    if [[ "$SETUP_SSL" == "y" ]]; then
+        ssl_protocol="https"
+    fi
+    
+    echo
+    log "${GREEN}🎉 CodeSeek Installation Completed Successfully!${NC}"
+    echo
+    log "📋 Installation Summary:"
+    log "   🌐 Application URL: ${ssl_protocol}://$DOMAIN"
+    log "   👤 Database User: $DB_USER"
+    log "   🗄️  Database Name: $DB_NAME"
+    log "   📁 Installation Directory: $APP_DIR"
+    log "   👥 Application User: $APP_USER"
+    echo
+    log "🔧 Service Management:"
+    log "   Status: systemctl status codeseek"
+    log "   Start:  systemctl start codeseek"
+    log "   Stop:   systemctl stop codeseek"
+    log "   Restart: systemctl restart codeseek"
+    log "   Logs:   journalctl -u codeseek -f"
+    echo
+    log "📊 System Information:"
+    log "   PostgreSQL: $(systemctl is-active postgresql)"
+    log "   Redis: $(systemctl is-active redis-server)"
+    log "   Nginx: $(systemctl is-active nginx)"
+    log "   CodeSeek: $(systemctl is-active codeseek)"
+    echo
+    log "⚠️  Important Notes:"
+    log "   1. Ensure your DNS points to this server IP"
+    log "   2. Configure regular database backups"
+    log "   3. Monitor application logs regularly"
+    log "   4. Keep the system updated"
+    echo
+    log "📖 Documentation: https://github.com/codeseek/codeseek"
+    log "🆘 Support: Run './troubleshoot.sh' for diagnostics"
+    echo
+    log "${GREEN}🚀 CodeSeek is now ready! Access ${ssl_protocol}://$DOMAIN to get started.${NC}"
+    echo
+}
+
+# ==============================================================================
+# FINALIZATION EXECUTION
+# ==============================================================================
+
+finalize_installation() {
+    log "Finalizing installation..."
+    
+    configure_systemd_service
+    build_frontend
+    start_services
+    run_post_install_checks
+    show_installation_summary
+    
+    log "Installation finalization completed"
+}
+
+# ==============================================================================
+# MAIN INSTALLATION FUNCTION
+# ==============================================================================
+
+main() {
+    # Initialize logging
+    log "Starting CodeSeek installation at $(date)"
+    log "Installation directory: $APP_DIR"
+    log "Log file: $LOG_FILE"
+    
+    # Pre-installation checks
+    check_root
+    check_os
+    
+    # Collect user input
+    collect_user_input
+    
+    # Show configuration summary
+    show_configuration_summary
+    
+    # Execute installation steps
+    run_installation
+    setup_application
+    setup_database
+    setup_webserver
+    finalize_installation
+    
+    log "CodeSeek installation completed successfully at $(date)"
+}
+
+# ==============================================================================
+# SCRIPT EXECUTION
+# ==============================================================================
+
+# Trap errors and cleanup
+trap 'error "Installation failed at line $LINENO. Check $LOG_FILE for details."' ERR
+
+# Execute main function
+main "$@"

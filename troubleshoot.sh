@@ -1,409 +1,485 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script de troubleshooting do CodeSeek
+# CodeSeek V1 - Troubleshoot Script
 # ==============================================================================
-#
-# Este script diagnostica e resolve problemas comuns da instalação do CodeSeek
-#
-# Uso: sudo bash troubleshoot.sh [--fix]
-#
-# Opções:
-#   --fix    Tenta corrigir automaticamente os problemas encontrados
-#
+# Description: Automated troubleshooting and problem resolution for CodeSeek
+# Author: CodeSeek Team
+# Version: 2.0.0
+# Usage: sudo ./troubleshoot.sh [--fix] [--verbose]
 # ==============================================================================
 
-# --- Cores para output ---
+set -euo pipefail
+
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
+
+APP_DIR="/opt/codeseek"
+APP_USER="codeseek"
+LOG_FILE="/var/log/codeseek-troubleshoot.log"
+FIX_MODE=false
+VERBOSE=false
+
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# --- Funções de Logging ---
+# ==============================================================================
+# LOGGING FUNCTIONS
+# ==============================================================================
+
 log() {
-    echo -e "${GREEN}[✓]${NC} $1"
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${GREEN}[INFO]${NC} $message"
+    echo "[$timestamp] [INFO] $message" >> "$LOG_FILE"
+}
+
+warn() {
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${YELLOW}[WARN]${NC} $message"
+    echo "[$timestamp] [WARN] $message" >> "$LOG_FILE"
 }
 
 error() {
-    echo -e "${RED}[✗]${NC} $1"
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${RED}[ERROR]${NC} $message"
+    echo "[$timestamp] [ERROR] $message" >> "$LOG_FILE"
 }
 
-warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
-}
-
-info() {
-    echo -e "${BLUE}[i]${NC} $1"
+step() {
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${BLUE}[STEP]${NC} $message"
+    echo "[$timestamp] [STEP] $message" >> "$LOG_FILE"
 }
 
 fix() {
-    echo -e "${BLUE}[FIX]${NC} $1"
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${PURPLE}[FIX]${NC} $message"
+    echo "[$timestamp] [FIX] $message" >> "$LOG_FILE"
 }
 
-# --- Variáveis ---
-APP_DIR="/opt/codeseek"
-APP_USER="codeseek"
-FIX_MODE=false
-ISSUES_FOUND=0
-ISSUES_FIXED=0
-
-if [[ "$1" == "--fix" ]]; then
-    FIX_MODE=true
-    info "Modo de correção automática ativado"
-fi
-
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE}  CodeSeek - Troubleshooting  ${NC}"
-echo -e "${BLUE}=========================================${NC}\n"
-
 # ==============================================================================
-# 1. DIAGNÓSTICO DE SERVIÇOS
+# UTILITY FUNCTIONS
 # ==============================================================================
 
-info "Diagnosticando serviços..."
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-# PostgreSQL
-if ! systemctl is-active --quiet postgresql; then
-    error "PostgreSQL não está rodando"
-    ((ISSUES_FOUND++))
-    
-    if $FIX_MODE; then
-        fix "Tentando iniciar PostgreSQL..."
-        if systemctl start postgresql; then
-            log "PostgreSQL iniciado com sucesso"
-            ((ISSUES_FIXED++))
-        else
-            error "Falha ao iniciar PostgreSQL"
-            warning "Verifique os logs: sudo journalctl -u postgresql"
-        fi
-    fi
-else
-    log "PostgreSQL está rodando"
-fi
+service_is_active() {
+    systemctl is-active --quiet "$1" 2>/dev/null
+}
 
-# Redis
-if ! systemctl is-active --quiet redis-server; then
-    error "Redis não está rodando"
-    ((ISSUES_FOUND++))
-    
-    if $FIX_MODE; then
-        fix "Tentando iniciar Redis..."
-        if systemctl start redis-server; then
-            log "Redis iniciado com sucesso"
-            ((ISSUES_FIXED++))
-        else
-            error "Falha ao iniciar Redis"
-            warning "Verifique os logs: sudo journalctl -u redis-server"
-        fi
-    fi
-else
-    log "Redis está rodando"
-fi
+service_is_enabled() {
+    systemctl is-enabled --quiet "$1" 2>/dev/null
+}
 
-# Nginx
-if ! systemctl is-active --quiet nginx; then
-    error "Nginx não está rodando"
-    ((ISSUES_FOUND++))
-    
-    if $FIX_MODE; then
-        fix "Verificando configuração do Nginx..."
-        if nginx -t; then
-            fix "Tentando iniciar Nginx..."
-            if systemctl start nginx; then
-                log "Nginx iniciado com sucesso"
-                ((ISSUES_FIXED++))
-            else
-                error "Falha ao iniciar Nginx"
-            fi
-        else
-            error "Configuração do Nginx inválida"
-            warning "Corrija a configuração em /etc/nginx/sites-enabled/"
-        fi
-    fi
-else
-    log "Nginx está rodando"
-fi
-
-# CodeSeek Service
-if ! systemctl is-active --quiet codeseek.service; then
-    error "Serviço CodeSeek não está rodando"
-    ((ISSUES_FOUND++))
-    
-    if $FIX_MODE; then
-        fix "Tentando iniciar serviço CodeSeek..."
-        if systemctl start codeseek.service; then
-            log "Serviço CodeSeek iniciado com sucesso"
-            ((ISSUES_FIXED++))
-        else
-            error "Falha ao iniciar serviço CodeSeek"
-            warning "Verificando logs detalhados..."
-            journalctl -u codeseek.service --no-pager -n 20
-        fi
-    fi
-else
-    log "Serviço CodeSeek está rodando"
-fi
+check_port() {
+    local port="$1"
+    netstat -tuln | grep -q ":$port "
+}
 
 # ==============================================================================
-# 2. DIAGNÓSTICO DE CONECTIVIDADE
+# DIAGNOSTIC FUNCTIONS
 # ==============================================================================
 
-info "Diagnosticando conectividade..."
-
-# Porta 3000 (aplicação)
-if ! netstat -tuln | grep -q ":3000 "; then
-    error "Aplicação não está escutando na porta 3000"
-    ((ISSUES_FOUND++))
+diagnose_nodejs() {
+    step "Diagnosing Node.js installation..."
     
-    if $FIX_MODE; then
-        fix "Verificando processo na porta 3000..."
-        if lsof -ti:3000; then
-            warning "Processo encontrado na porta 3000, mas não é o esperado"
-            fix "Tentando reiniciar serviço CodeSeek..."
-            systemctl restart codeseek.service
-            sleep 5
-            if netstat -tuln | grep -q ":3000 "; then
-                log "Porta 3000 agora está ativa"
-                ((ISSUES_FIXED++))
-            fi
-        else
-            warning "Nenhum processo na porta 3000"
-            fix "Verificando configuração do serviço..."
-            if [ -f "/etc/systemd/system/codeseek.service" ]; then
-                systemctl daemon-reload
-                systemctl restart codeseek.service
-                sleep 5
-                if netstat -tuln | grep -q ":3000 "; then
-                    log "Serviço reiniciado e porta 3000 ativa"
-                    ((ISSUES_FIXED++))
-                fi
-            fi
+    if ! command_exists node; then
+        error "Node.js is not installed or not in PATH"
+        if [[ "$FIX_MODE" == "true" ]]; then
+            fix_nodejs
         fi
+        return 1
     fi
-else
-    log "Aplicação está escutando na porta 3000"
-fi
-
-# Teste de resposta HTTP
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
-if [[ ! "$HTTP_CODE" =~ ^(200|302|404)$ ]]; then
-    error "Aplicação não está respondendo corretamente (HTTP $HTTP_CODE)"
-    ((ISSUES_FOUND++))
     
-    if $FIX_MODE; then
-        fix "Tentando reiniciar aplicação..."
-        systemctl restart codeseek.service
-        sleep 10
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
-        if [[ "$HTTP_CODE" =~ ^(200|302|404)$ ]]; then
-            log "Aplicação agora está respondendo (HTTP $HTTP_CODE)"
-            ((ISSUES_FIXED++))
-        else
-            error "Aplicação ainda não está respondendo após reinicialização"
+    if ! command_exists npm; then
+        error "npm is not installed or not in PATH"
+        if [[ "$FIX_MODE" == "true" ]]; then
+            fix_npm_path
         fi
+        return 1
     fi
-else
-    log "Aplicação está respondendo (HTTP $HTTP_CODE)"
-fi
-
-# ==============================================================================
-# 3. DIAGNÓSTICO DE BANCO DE DADOS
-# ==============================================================================
-
-info "Diagnosticando banco de dados..."
-
-# Conectividade PostgreSQL
-if ! sudo -u postgres psql -c "SELECT 1" &>/dev/null; then
-    error "Não é possível conectar ao PostgreSQL"
-    ((ISSUES_FOUND++))
     
-    if $FIX_MODE; then
-        fix "Tentando reiniciar PostgreSQL..."
-        systemctl restart postgresql
-        sleep 5
-        if sudo -u postgres psql -c "SELECT 1" &>/dev/null; then
-            log "Conexão com PostgreSQL restaurada"
-            ((ISSUES_FIXED++))
-        else
-            error "Ainda não é possível conectar ao PostgreSQL"
-            warning "Verifique os logs: sudo journalctl -u postgresql"
+    local node_version=$(node --version)
+    local npm_version=$(npm --version)
+    
+    log "Node.js version: $node_version"
+    log "npm version: $npm_version"
+    
+    # Check if codeseek user can access npm
+    if ! sudo -u "$APP_USER" which npm >/dev/null 2>&1; then
+        error "User '$APP_USER' cannot access npm"
+        if [[ "$FIX_MODE" == "true" ]]; then
+            fix_npm_path
         fi
+        return 1
     fi
-else
-    log "Conexão com PostgreSQL OK"
-fi
-
-# Verificar banco de dados da aplicação
-if [ -f "$APP_DIR/backend/.env" ]; then
-    DB_NAME=$(grep DB_NAME "$APP_DIR/backend/.env" | cut -d '=' -f2)
-    DB_USER=$(grep DB_USER "$APP_DIR/backend/.env" | cut -d '=' -f2)
     
-    if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
-        error "Banco de dados '$DB_NAME' não existe"
-        ((ISSUES_FOUND++))
+    log "Node.js and npm are properly configured"
+    return 0
+}
+
+diagnose_services() {
+    step "Diagnosing system services..."
+    
+    local services=("postgresql" "redis-server" "nginx" "codeseek")
+    local failed_services=()
+    
+    for service in "${services[@]}"; do
+        if ! service_is_active "$service"; then
+            error "Service '$service' is not running"
+            failed_services+=("$service")
+        else
+            log "Service '$service' is running"
+        fi
+    done
+    
+    if [[ ${#failed_services[@]} -gt 0 ]] && [[ "$FIX_MODE" == "true" ]]; then
+        fix_services "${failed_services[@]}"
+    fi
+    
+    return ${#failed_services[@]}
+}
+
+diagnose_database() {
+    step "Diagnosing database connection..."
+    
+    if ! service_is_active "postgresql"; then
+        error "PostgreSQL service is not running"
+        return 1
+    fi
+    
+    # Test PostgreSQL connection
+    if ! sudo -u postgres psql -c "SELECT 1" >/dev/null 2>&1; then
+        error "Cannot connect to PostgreSQL"
+        if [[ "$FIX_MODE" == "true" ]]; then
+            fix_postgresql
+        fi
+        return 1
+    fi
+    
+    # Check if CodeSeek database exists
+    if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw codeseek; then
+        warn "CodeSeek database does not exist"
+        if [[ "$FIX_MODE" == "true" ]]; then
+            fix_database_setup
+        fi
+        return 1
+    fi
+    
+    log "Database connection is working"
+    return 0
+}
+
+diagnose_permissions() {
+    step "Diagnosing file permissions..."
+    
+    if [[ ! -d "$APP_DIR" ]]; then
+        error "Application directory does not exist: $APP_DIR"
+        return 1
+    fi
+    
+    local owner=$(stat -c '%U' "$APP_DIR")
+    if [[ "$owner" != "$APP_USER" ]]; then
+        error "Incorrect ownership of $APP_DIR (owner: $owner, expected: $APP_USER)"
+        if [[ "$FIX_MODE" == "true" ]]; then
+            fix_permissions
+        fi
+        return 1
+    fi
+    
+    # Check critical files
+    local critical_files=(
+        "$APP_DIR/backend/server.js"
+        "$APP_DIR/backend/package.json"
+        "$APP_DIR/backend/.env"
+    )
+    
+    for file in "${critical_files[@]}"; do
+        if [[ ! -f "$file" ]]; then
+            error "Critical file missing: $file"
+            return 1
+        fi
         
-        if $FIX_MODE; then
-            fix "Tentando recriar banco de dados..."
-            DB_PASSWORD=$(grep DB_PASSWORD "$APP_DIR/backend/.env" | cut -d '=' -f2)
-            
-            # Criar usuário se não existir
-            if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
-                sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+        local file_owner=$(stat -c '%U' "$file")
+        if [[ "$file_owner" != "$APP_USER" ]]; then
+            error "Incorrect ownership of $file (owner: $file_owner, expected: $APP_USER)"
+            if [[ "$FIX_MODE" == "true" ]]; then
+                fix_permissions
             fi
-            
-            # Criar banco
-            if sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"; then
-                sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
-                log "Banco de dados '$DB_NAME' criado"
-                
-                # Executar setup do banco
-                cd "$APP_DIR/backend"
-                if sudo -u $APP_USER NODE_ENV=production node setup-database.js; then
-                    log "Schema do banco de dados configurado"
-                    ((ISSUES_FIXED++))
-                else
-                    error "Falha ao configurar schema do banco"
-                fi
-            fi
+            return 1
         fi
-    else
-        log "Banco de dados '$DB_NAME' existe"
-    fi
-fi
-
-# ==============================================================================
-# 4. DIAGNÓSTICO DE ARQUIVOS E PERMISSÕES
-# ==============================================================================
-
-info "Diagnosticando arquivos e permissões..."
-
-# Verificar propriedade dos arquivos
-if [ -d "$APP_DIR" ]; then
-    if [ "$(stat -c '%U' $APP_DIR)" != "$APP_USER" ]; then
-        error "Propriedade incorreta do diretório $APP_DIR"
-        ((ISSUES_FOUND++))
-        
-        if $FIX_MODE; then
-            fix "Corrigindo propriedade dos arquivos..."
-            chown -R $APP_USER:$APP_USER $APP_DIR
-            log "Propriedade dos arquivos corrigida"
-            ((ISSUES_FIXED++))
-        fi
-    else
-        log "Propriedade dos arquivos está correta"
-    fi
-fi
-
-# Verificar arquivo .env
-if [ ! -f "$APP_DIR/backend/.env" ]; then
-    error "Arquivo .env não encontrado"
-    ((ISSUES_FOUND++))
+    done
     
-    if $FIX_MODE; then
-        if [ -f "$APP_DIR/backend/.env.example" ]; then
-            fix "Criando arquivo .env a partir do exemplo..."
-            cp "$APP_DIR/backend/.env.example" "$APP_DIR/backend/.env"
-            chown $APP_USER:$APP_USER "$APP_DIR/backend/.env"
-            chmod 600 "$APP_DIR/backend/.env"
-            warning "Arquivo .env criado, mas precisa ser configurado manualmente"
-            ((ISSUES_FIXED++))
-        fi
-    fi
-else
-    log "Arquivo .env encontrado"
-fi
+    log "File permissions are correct"
+    return 0
+}
 
-# Verificar dependências do Node.js
-if [ ! -d "$APP_DIR/backend/node_modules" ]; then
-    error "Dependências do Node.js não instaladas"
-    ((ISSUES_FOUND++))
+diagnose_network() {
+    step "Diagnosing network connectivity..."
     
-    if $FIX_MODE; then
-        fix "Instalando dependências do Node.js..."
-        cd "$APP_DIR/backend"
-        if sudo -u $APP_USER npm install --production; then
-            log "Dependências instaladas com sucesso"
-            ((ISSUES_FIXED++))
+    # Check if ports are available
+    local ports=("3000" "5432" "6379" "80" "443")
+    
+    for port in "${ports[@]}"; do
+        if check_port "$port"; then
+            log "Port $port is in use"
         else
-            error "Falha ao instalar dependências"
+            warn "Port $port is not in use"
+        fi
+    done
+    
+    # Test external connectivity
+    if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+        log "External connectivity is working"
+    else
+        error "No external connectivity"
+        return 1
+    fi
+    
+    return 0
+}
+
+# ==============================================================================
+# FIX FUNCTIONS
+# ==============================================================================
+
+fix_nodejs() {
+    fix "Installing Node.js..."
+    
+    # Install NodeSource repository
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    
+    log "Node.js installation completed"
+}
+
+fix_npm_path() {
+    fix "Fixing npm PATH issues..."
+    
+    # Add npm to PATH for all users
+    local npm_path=$(which npm 2>/dev/null || echo "/usr/bin/npm")
+    local npm_dir=$(dirname "$npm_path")
+    
+    # Update PATH for codeseek user
+    if [[ -f "/home/$APP_USER/.bashrc" ]]; then
+        if ! grep -q "$npm_dir" "/home/$APP_USER/.bashrc"; then
+            echo "export PATH=\$PATH:$npm_dir" >> "/home/$APP_USER/.bashrc"
         fi
     fi
-else
-    log "Dependências do Node.js instaladas"
-fi
-
-# ==============================================================================
-# 5. DIAGNÓSTICO DE LOGS
-# ==============================================================================
-
-info "Analisando logs recentes..."
-
-# Logs do CodeSeek
-echo -e "\n${YELLOW}--- Últimos logs do CodeSeek ---${NC}"
-journalctl -u codeseek.service --no-pager -n 10
-
-# Logs do Nginx (se houver erros)
-if [ -f "/var/log/nginx/error.log" ]; then
-    NGINX_ERRORS=$(tail -n 20 /var/log/nginx/error.log | grep -i error | wc -l)
-    if [ "$NGINX_ERRORS" -gt 0 ]; then
-        echo -e "\n${YELLOW}--- Últimos erros do Nginx ---${NC}"
-        tail -n 20 /var/log/nginx/error.log | grep -i error
+    
+    # Create symlink if needed
+    if [[ ! -f "/usr/local/bin/npm" ]] && [[ -f "$npm_path" ]]; then
+        sudo ln -sf "$npm_path" "/usr/local/bin/npm"
     fi
-fi
+    
+    log "npm PATH issues fixed"
+}
 
-# ==============================================================================
-# 6. TESTES DE DIAGNÓSTICO DA APLICAÇÃO
-# ==============================================================================
+fix_services() {
+    local services=("$@")
+    
+    for service in "${services[@]}"; do
+        fix "Starting service: $service"
+        
+        # Enable and start service
+        sudo systemctl enable "$service" 2>/dev/null || true
+        sudo systemctl start "$service"
+        
+        # Wait for service to start
+        sleep 2
+        
+        if service_is_active "$service"; then
+            log "Service '$service' started successfully"
+        else
+            error "Failed to start service '$service'"
+            # Show service status for debugging
+            sudo systemctl status "$service" --no-pager -l
+        fi
+    done
+}
 
-info "Executando diagnóstico da aplicação..."
+fix_postgresql() {
+    fix "Fixing PostgreSQL issues..."
+    
+    # Restart PostgreSQL
+    sudo systemctl restart postgresql
+    sleep 3
+    
+    # Check if it's running now
+    if service_is_active "postgresql"; then
+        log "PostgreSQL restarted successfully"
+    else
+        error "Failed to restart PostgreSQL"
+        sudo systemctl status postgresql --no-pager -l
+    fi
+}
 
-if [ -f "$APP_DIR/backend/diagnose.js" ]; then
+fix_database_setup() {
+    fix "Setting up CodeSeek database..."
+    
+    # Create database and user
+    sudo -u postgres psql -c "CREATE DATABASE codeseek;" 2>/dev/null || true
+    sudo -u postgres psql -c "CREATE USER codeseek WITH PASSWORD 'codeseek123';" 2>/dev/null || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE codeseek TO codeseek;" 2>/dev/null || true
+    
+    log "Database setup completed"
+}
+
+fix_permissions() {
+    fix "Fixing file permissions..."
+    
+    # Fix ownership
+    sudo chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+    
+    # Fix permissions
+    sudo chmod -R 755 "$APP_DIR"
+    sudo chmod 600 "$APP_DIR/backend/.env" 2>/dev/null || true
+    
+    log "File permissions fixed"
+}
+
+fix_dependencies() {
+    fix "Installing missing dependencies..."
+    
     cd "$APP_DIR/backend"
-    echo -e "\n${YELLOW}--- Diagnóstico da Aplicação ---${NC}"
-    sudo -u $APP_USER node diagnose.js
-else
-    warning "Script de diagnóstico não encontrado"
-fi
-
-# ==============================================================================
-# 7. RELATÓRIO FINAL
-# ==============================================================================
-
-echo -e "\n${BLUE}=========================================${NC}"
-echo -e "${BLUE}  Relatório de Troubleshooting  ${NC}"
-echo -e "${BLUE}=========================================${NC}\n"
-
-if [ "$ISSUES_FOUND" -eq 0 ]; then
-    echo -e "${GREEN}✓ Nenhum problema encontrado!${NC}"
-    echo -e "\nSe você ainda está enfrentando problemas, verifique:"
-    echo -e "- Logs detalhados: ${BLUE}sudo journalctl -u codeseek.service -f${NC}"
-    echo -e "- Configuração do Nginx: ${BLUE}sudo nginx -t${NC}"
-    echo -e "- Conectividade de rede e DNS"
-elif $FIX_MODE; then
-    echo -e "${YELLOW}Problemas encontrados: $ISSUES_FOUND${NC}"
-    echo -e "${GREEN}Problemas corrigidos: $ISSUES_FIXED${NC}"
     
-    if [ "$ISSUES_FIXED" -eq "$ISSUES_FOUND" ]; then
-        echo -e "\n${GREEN}✓ Todos os problemas foram corrigidos!${NC}"
-        echo -e "\nExecute a verificação pós-instalação para confirmar:"
-        echo -e "${BLUE}sudo bash post-install-check.sh${NC}"
+    # Install backend dependencies as codeseek user
+    sudo -u "$APP_USER" npm install
+    
+    log "Dependencies installation completed"
+}
+
+# ==============================================================================
+# MAIN FUNCTIONS
+# ==============================================================================
+
+show_help() {
+    echo "CodeSeek V1 Troubleshoot Script"
+    echo ""
+    echo "Usage: sudo $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --fix, -f       Automatically fix detected problems"
+    echo "  --verbose, -v   Enable verbose output"
+    echo "  --help, -h      Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  sudo $0                    # Diagnose problems only"
+    echo "  sudo $0 --fix             # Diagnose and fix problems"
+    echo "  sudo $0 --fix --verbose   # Diagnose, fix with verbose output"
+}
+
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --fix|-f)
+                FIX_MODE=true
+                shift
+                ;;
+            --verbose|-v)
+                VERBOSE=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+}
+
+run_diagnostics() {
+    local total_issues=0
+    
+    step "Starting CodeSeek troubleshooting..."
+    
+    if [[ "$FIX_MODE" == "true" ]]; then
+        log "Fix mode enabled - will attempt to resolve issues automatically"
     else
-        echo -e "\n${YELLOW}⚠ Alguns problemas não puderam ser corrigidos automaticamente${NC}"
-        echo -e "\nProblemas restantes requerem intervenção manual."
+        log "Diagnostic mode - will only identify issues"
     fi
-else
-    echo -e "${YELLOW}$ISSUES_FOUND problema(s) encontrado(s)${NC}"
-    echo -e "\nPara tentar corrigir automaticamente, execute:"
-    echo -e "${BLUE}sudo bash troubleshoot.sh --fix${NC}"
-fi
+    
+    # Run all diagnostic functions
+    diagnose_nodejs || ((total_issues++))
+    diagnose_services || ((total_issues++))
+    diagnose_database || ((total_issues++))
+    diagnose_permissions || ((total_issues++))
+    diagnose_network || ((total_issues++))
+    
+    return $total_issues
+}
 
-echo -e "\n${YELLOW}Comandos úteis para diagnóstico manual:${NC}"
-echo -e "Status dos serviços:      ${BLUE}sudo systemctl status codeseek nginx postgresql redis-server${NC}"
-echo -e "Logs do CodeSeek:         ${BLUE}sudo journalctl -u codeseek.service -f${NC}"
-echo -e "Logs do Nginx:            ${BLUE}sudo tail -f /var/log/nginx/error.log${NC}"
-echo -e "Testar configuração:      ${BLUE}sudo nginx -t${NC}"
-echo -e "Reiniciar todos serviços: ${BLUE}sudo systemctl restart codeseek nginx postgresql redis-server${NC}"
-echo -e "Verificação completa:     ${BLUE}sudo bash post-install-check.sh${NC}"
+generate_report() {
+    local issues_found=$1
+    
+    echo ""
+    echo "======================================"
+    echo "CodeSeek Troubleshoot Report"
+    echo "======================================"
+    echo "Timestamp: $(date)"
+    echo "Fix mode: $([[ "$FIX_MODE" == "true" ]] && echo "Enabled" || echo "Disabled")"
+    echo "Issues found: $issues_found"
+    echo "Log file: $LOG_FILE"
+    echo ""
+    
+    if [[ $issues_found -eq 0 ]]; then
+        echo -e "${GREEN}✓ No issues detected - CodeSeek appears to be working correctly${NC}"
+    elif [[ "$FIX_MODE" == "true" ]]; then
+        echo -e "${YELLOW}⚠ Issues were detected and fix attempts were made${NC}"
+        echo "Please run the script again to verify fixes were successful"
+    else
+        echo -e "${RED}✗ Issues detected${NC}"
+        echo "Run with --fix flag to attempt automatic resolution:"
+        echo "sudo $0 --fix"
+    fi
+    
+    echo ""
+    echo "For manual troubleshooting, check the log file: $LOG_FILE"
+}
 
-echo -e "\n${BLUE}=========================================${NC}\n"
+main() {
+    # Check if running as root
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root (use sudo)"
+        exit 1
+    fi
+    
+    # Parse command line arguments
+    parse_arguments "$@"
+    
+    # Create log file
+    mkdir -p "$(dirname "$LOG_FILE")"
+    touch "$LOG_FILE"
+    
+    # Run diagnostics
+    local issues_found=0
+    run_diagnostics || issues_found=$?
+    
+    # Generate report
+    generate_report $issues_found
+    
+    # Exit with appropriate code
+    exit $issues_found
+}
+
+# Execute main function
+main "$@"

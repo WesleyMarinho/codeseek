@@ -69,6 +69,12 @@ wait_for_service() {
     local max_attempts=30
     local attempt=1
     
+    # No WSL, alguns serviços podem não funcionar normalmente
+    if [ "$WSL_DETECTED" = "true" ]; then
+        warning "WSL detectado - pulando verificação de serviço para $service"
+        return 0
+    fi
+    
     while [ $attempt -le $max_attempts ]; do
         if systemctl is-active --quiet "$service"; then
             log "$service está ativo"
@@ -86,10 +92,23 @@ wait_for_service() {
 
 # --- Função para verificar conectividade ---
 check_connectivity() {
-    if ! ping -c 1 google.com &> /dev/null; then
+    if ! ping -c 1 google.com &> /dev/null && ! ping -c 1 8.8.8.8 &> /dev/null; then
         error "Sem conectividade com a internet"
         exit 1
     fi
+}
+
+# --- Função para verificar espaço em disco ---
+check_disk_space() {
+    local required_space=2048  # 2GB em MB
+    local available_space=$(df / | awk 'NR==2 {print int($4/1024)}')
+    
+    if [ "$available_space" -lt "$required_space" ]; then
+        error "Espaço insuficiente em disco. Necessário: ${required_space}MB, Disponível: ${available_space}MB"
+        exit 1
+    fi
+    
+    log "Espaço em disco suficiente: ${available_space}MB disponível"
 }
 
 # --- Função para backup de configurações existentes ---
@@ -147,6 +166,14 @@ if [ ! -f /etc/debian_version ]; then
     exit 1
 fi
 
+# Detectar WSL e ajustar configurações
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    warning "WSL detectado - algumas funcionalidades podem ser limitadas"
+    export WSL_DETECTED=true
+else
+    export WSL_DETECTED=false
+fi
+
 # ==============================================================================
 # INÍCIO DA INSTALAÇÃO
 # ==============================================================================
@@ -171,6 +198,10 @@ sleep 5
 step "Verificando conectividade"
 check_connectivity
 log "Conectividade OK"
+
+# Verificar espaço em disco
+step "Verificando espaço em disco"
+check_disk_space
 
 # Backup de configurações existentes
 step "Fazendo backup de configurações existentes"
@@ -226,10 +257,28 @@ if ! command_exists node || [[ "$(node --version)" != v18* ]]; then
         exit 1
     fi
     
+    # Garantir que npm está no PATH para sudo
+    NPM_PATH=$(which npm)
+    if [ -n "$NPM_PATH" ]; then
+        ln -sf "$NPM_PATH" /usr/local/bin/npm 2>/dev/null || true
+    fi
+    
     log "Node.js $(node --version) instalado"
     log "npm $(npm --version) instalado"
 else
     log "Node.js já está instalado: $(node --version)"
+    # Verificar se npm está acessível
+    if ! command_exists npm; then
+        warning "npm não encontrado no PATH, tentando corrigir..."
+        NPM_PATH=$(find /usr -name npm -type f 2>/dev/null | head -1)
+        if [ -n "$NPM_PATH" ]; then
+            ln -sf "$NPM_PATH" /usr/local/bin/npm
+            log "npm PATH corrigido"
+        else
+            error "npm não encontrado no sistema"
+            exit 1
+        fi
+    fi
 fi
 
 # ==============================================================================
@@ -370,7 +419,18 @@ step "Instalando dependências do backend"
 cd "$APP_DIR/backend"
 
 if [ -f "package.json" ]; then
-    sudo -u codeseek npm install --production
+    # Verificar se npm está disponível para o usuário codeseek
+    if ! sudo -u codeseek which npm >/dev/null 2>&1; then
+        warning "npm não encontrado para usuário codeseek, configurando PATH..."
+        NPM_PATH=$(which npm)
+        if [ -n "$NPM_PATH" ]; then
+            echo "export PATH=\$PATH:$(dirname $NPM_PATH)" >> /home/codeseek/.bashrc
+            echo "export PATH=\$PATH:$(dirname $NPM_PATH)" >> /home/codeseek/.profile
+        fi
+    fi
+    
+    # Instalar dependências com PATH completo
+    sudo -u codeseek env PATH="$PATH" npm install --production
     log "Dependências do backend instaladas"
 else
     error "package.json não encontrado em $APP_DIR/backend"
@@ -552,6 +612,12 @@ fi
 
 step "Configurando Nginx"
 
+# Verificar se Nginx está instalado
+if ! command_exists nginx; then
+    error "Nginx não está instalado"
+    exit 1
+fi
+
 # Remover configuração padrão
 rm -f /etc/nginx/sites-enabled/default
 
@@ -634,6 +700,11 @@ if nginx -t; then
     log "Configuração do Nginx válida"
 else
     error "Configuração do Nginx inválida"
+    # Restaurar backup se existir
+    if [ -f "/etc/nginx/sites-available/codeseek.backup" ]; then
+        warning "Restaurando configuração anterior..."
+        mv "/etc/nginx/sites-available/codeseek.backup" "/etc/nginx/sites-available/codeseek"
+    fi
     exit 1
 fi
 

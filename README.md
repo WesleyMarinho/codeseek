@@ -72,157 +72,71 @@ CodeSeek/
 
 ## 🚀 Quick Start
 
+### 🎯 Production Installation
+
+```bash
+# One-line automated installation
+curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
+```
+
+### 🔧 Development Setup
+
+```bash
+# Clone and install
+git clone https://github.com/WesleyMarinho/codeseek.git
+cd codeseek
+sudo bash install.sh
+```
+
+**For detailed installation instructions, see [README-INSTALL.md](README-INSTALL.md)**
+
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 14+
 - Redis 6+
-- Git
 - Ubuntu/Debian Linux (for automated installation)
 
-### 🎯 One-Line Automated Installation (Recommended)
+## 🔧 Configuration
 
-For production deployment on Ubuntu/Debian servers:
+Key environment variables (see `.env.example`):
 
 ```bash
-# Complete automated installation with domain and admin email
-curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
+# Database
+DB_HOST=localhost
+DB_NAME=codeseek
+DB_USER=codeseek
+DB_PASSWORD=your_secure_password
+
+# Application
+APP_SECRET=your_app_secret_key
+DOMAIN=yourdomain.com
+ADMIN_EMAIL=admin@yourdomain.com
+
+# Optional: Payment Integration
+CHARGEBEE_SITE=your_site
+CHARGEBEE_API_KEY=your_api_key
 ```
 
-**What the automated installer does:**
-- ✅ Installs all system dependencies (Node.js, PostgreSQL, Redis, Nginx)
-- ✅ Creates dedicated `codeseek` user for security
-- ✅ Clones and configures the application
-- ✅ Sets up SSL certificates with Let's Encrypt
-- ✅ Configures Nginx reverse proxy
-- ✅ Creates systemd service for auto-start
-- ✅ Runs security hardening
-- ✅ Provides post-installation verification
+## 🚨 Troubleshooting
 
-**Installation Parameters:**
-- `DOMAIN`: Your domain name (required)
-- `ADMIN_EMAIL`: Admin email for SSL certificates (required)
-- `DB_PASSWORD`: Custom database password (optional)
-- `APP_SECRET`: Custom app secret (optional)
-
-### 📋 Available Installation Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `one-line-install.sh` | Complete automated installation | Production deployment |
-| `install-auto.sh` | Interactive installation with prompts | Custom configurations |
-| `pre-install-check.sh` | System requirements verification | Pre-deployment check |
-| `post-install-check.sh` | Installation verification | Post-deployment validation |
-| `troubleshoot.sh` | Diagnostic and repair tools | Issue resolution |
-| `setup-scripts.sh` | Script management utility | Development/maintenance |
-
-### 🔧 Manual Local Development Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/WesleyMarinho/codeseek.git
-   cd codeseek
-   ```
-
-2. **Install backend dependencies**
-   ```bash
-   cd backend
-   npm install
-   ```
-
-3. **Environment configuration**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database, Redis, and Chargebee credentials
-   ```
-
-4. **Database setup**
-   ```bash
-   # Create PostgreSQL database
-   createdb codeseek
-   
-   # Run migrations to create tables
-   npm run migrate
-   
-   # Optional: Seed with sample data
-   npm run seed
-   ```
-
-5. **Redis setup**
-   ```bash
-   # Make sure Redis is running
-   redis-server
-   ```
-
-6. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-7. **Access the application**
-   - Marketplace: `http://localhost:3000`
-   - Admin Dashboard: `http://localhost:3000/admin`
-   - User Dashboard: `http://localhost:3000/dashboard`
-
-### 🔍 Post-Installation Verification
-
-After installation, verify your deployment:
+For issues and diagnostics:
 
 ```bash
-# Run post-installation checks
-sudo bash /opt/codeseek/post-install-check.sh
+# Run comprehensive diagnostics
+bash troubleshoot.sh
 
-# Check application status
-sudo systemctl status codeseek
+# Check installation
+bash post-install-check.sh
 
-# View application logs
+# View service logs
 sudo journalctl -u codeseek -f
 ```
 
-### 🛠️ Troubleshooting Common Issues
-
-#### Services with Pending Restart
-If you see services requiring restart after installation:
-
-```bash
-# Restart system services
-sudo systemctl restart NetworkManager.service
-sudo systemctl restart getty@tty1.service
-sudo systemctl restart lightdm.service
-sudo systemctl restart networkd-dispatcher.service
-sudo systemctl restart systemd-logind.service
-sudo systemctl restart unattended-upgrades.service
-
-# Restart user sessions if needed
-sudo systemctl restart user@$(id -u).service
-```
-
-#### Repository Clone Issues
-If you encounter "directory not empty" errors:
-
-```bash
-# The installer automatically handles this, but for manual fixes:
-sudo rm -rf /opt/codeseek/*
-sudo rm -rf /opt/codeseek/.[!.]*
-sudo -u codeseek git clone https://github.com/WesleyMarinho/codeseek.git /opt/codeseek
-```
-
-#### Application Diagnostics
-Run comprehensive diagnostics:
-
-```bash
-# Full system troubleshooting
-sudo bash /opt/codeseek/troubleshoot.sh
-
-# Application-specific diagnostics
-cd /opt/codeseek/backend && sudo -u codeseek node diagnose.js
-```
+**For detailed troubleshooting, see [README-INSTALL.md](README-INSTALL.md)**
 
 ## 🐳 Docker Setup
 
-For quick setup using Docker:
-
 ```bash
-# Clone and start with Docker Compose
 git clone https://github.com/WesleyMarinho/codeseek.git
 cd codeseek
 docker-compose up --build
@@ -230,120 +144,43 @@ docker-compose up --build
 
 ## 📚 API Documentation
 
-### Public API
+### Public Endpoints
+- `GET /api/health` - Health check
+- `GET /api/products` - List products
+- `GET /api/products/:id` - Product details
+- `GET /api/categories` - List categories
+- `GET /api/search?q=query` - Search products
 
-#### License Validation
-```http
-POST /api/public/validate-license
-Content-Type: application/json
-
-{
-  "license_key": "XXXX-XXXX-XXXX-XXXX",
-  "domain": "example.com"
-}
-```
-
-#### Public Settings
-```http
-GET /api/public/settings
-```
-
-### Protected API
-
-#### User Licenses
-```http
-GET /api/user/licenses
-Authorization: Bearer <token>
-```
-
-#### Admin Operations
-```http
-GET /api/admin/products
-POST /api/admin/products
-PUT /api/admin/products/:id
-DELETE /api/admin/products/:id
-```
+### Protected Endpoints
+- `GET /api/admin/users` - User management (Admin)
+- `POST /api/admin/products` - Product management (Admin)
+- `GET /api/licenses` - User licenses
+- `POST /api/licenses/validate` - License validation
 
 ## 🛠️ Development
 
-### Available Scripts
-
 ```bash
-# Development
-npm run dev          # Start development server with nodemon
-npm run start        # Start production server
-
-# Database Operations
-npm run migrate      # Run all pending migrations
-npm run seed         # Seed database with sample data
-npm run db:reset     # Reset database (drop + migrate + seed)
-
-# Code Quality
-npm test             # Run test suite
-npm run lint         # Run ESLint code analysis
-npm run format       # Format code with Prettier
+npm run dev          # Development server
+npm run start        # Production server
+npm run migrate      # Database migrations
+npm test             # Run tests
 ```
-
-## 🗺️ Roadmap
-
-### Current Development Focus
-- ✅ **Core Marketplace**: Fully functional with product management
-- ✅ **License System**: Automated generation and validation
-- ✅ **Payment Integration**: Chargebee subscription management
-- ✅ **Security**: CSP implementation and secure event handling
-- ✅ **Admin Dashboard**: Comprehensive management tools
-- ✅ **Automated Deployment**: One-line installation system
-- 🔄 **API Documentation**: In progress
-- ⏳ **CI/CD Pipeline**: Planned for Q1 2025
-- ⏳ **Multi-language Support**: Planned for Q2 2025
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE).
 
 ## 🆘 Support
 
-### Getting Help
-- 🐛 **Issues**: [GitHub Issues](https://github.com/WesleyMarinho/codeseek/issues)
-- 📖 **Documentation**: [Project Wiki](https://github.com/WesleyMarinho/codeseek/wiki)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/WesleyMarinho/codeseek/discussions)
-
-### Troubleshooting Tools
-- 🔧 **System Check**: `sudo bash /opt/codeseek/pre-install-check.sh`
-- ✅ **Post-Install Verification**: `sudo bash /opt/codeseek/post-install-check.sh`
-- 🛠️ **Troubleshooting**: `sudo bash /opt/codeseek/troubleshoot.sh`
-- 📊 **Application Diagnostics**: `cd /opt/codeseek/backend && sudo -u codeseek node diagnose.js`
-
-## 🏆 Current Status
-
-- ✅ **Core Marketplace**: Fully functional with product management
-- ✅ **License System**: Automated generation and validation
-- ✅ **Payment Integration**: Chargebee subscription management
-- ✅ **Security**: CSP implementation and secure event handling
-- ✅ **Admin Dashboard**: Comprehensive management tools
-- ✅ **Automated Deployment**: One-line installation system
-- ✅ **Production Ready**: Complete deployment automation
-- ✅ **Troubleshooting Tools**: Comprehensive diagnostic scripts
-- ✅ **Responsive Design**: Mobile-first approach
-- 🔄 **API Documentation**: In progress
-- ⏳ **CI/CD Pipeline**: Planned for Q1 2025
-
-### 🚀 Latest Updates (v1.0.0)
-- **Automated Installation**: Complete one-line deployment system
-- **Security Hardening**: Production-ready security configurations
-- **Troubleshooting Suite**: Comprehensive diagnostic and repair tools
-- **Documentation Consolidation**: Streamlined installation guides
-- **Repository Corrections**: Fixed all deployment script URLs
+- **Issues**: [GitHub Issues](https://github.com/WesleyMarinho/codeseek/issues)
+- **Installation Guide**: [README-INSTALL.md](README-INSTALL.md)
+- **Email**: support@codeseek.com
 
 ---
 
-*Last updated: January 2025 - Version 1.0.0*
+**CodeSeek V1** - Production-ready digital marketplace platform.
 

@@ -1,184 +1,285 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script de verificação pós-instalação do CodeSeek
+# POST-INSTALL CHECK SCRIPT - CodeSeek v1.0
 # ==============================================================================
-#
-# Este script verifica se a instalação do CodeSeek foi bem-sucedida
-# e se todos os serviços estão funcionando corretamente.
+# Script para verificação pós-instalação do CodeSeek
+# Verifica se todos os componentes estão funcionando corretamente
 #
 # Uso: sudo bash post-install-check.sh [DOMAIN]
-#
 # ==============================================================================
+
+set -euo pipefail
 
 # --- Cores para output ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# --- Funções de Logging ---
-log() {
-    echo -e "${GREEN}[✓]${NC} $1"
-}
-
-error() {
-    echo -e "${RED}[✗]${NC} $1"
-}
-
-warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
-}
-
-info() {
-    echo -e "${BLUE}[i]${NC} $1"
-}
+# --- Funções de log ---
+log() { echo -e "${GREEN}[INFO]${NC} $1"; }
+warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; }
+info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+step() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 
 # --- Variáveis ---
-DOMAIN="$1"
+DOMAIN="${1:-}"
 APP_DIR="/opt/codeseek"
-APP_USER="codeseek"
-ERROR_COUNT=0
-WARNING_COUNT=0
+USER="codeseek"
+SERVICE="codeseek"
+CHECK_RESULTS=()
+FAILED_CHECKS=0
+TOTAL_CHECKS=0
 
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE}  CodeSeek - Verificação Pós-Instalação  ${NC}"
-echo -e "${BLUE}=========================================${NC}\n"
-
-# ==============================================================================
-# 1. VERIFICAÇÕES DE ARQUIVOS E DIRETÓRIOS
-# ==============================================================================
-
-info "Verificando estrutura de arquivos..."
-
-if [ -d "$APP_DIR" ]; then
-    log "Diretório da aplicação existe: $APP_DIR"
-else
-    error "Diretório da aplicação não encontrado: $APP_DIR"
-    ((ERROR_COUNT++))
-fi
-
-if [ -f "$APP_DIR/backend/server.js" ]; then
-    log "Arquivo principal do servidor encontrado"
-else
-    error "Arquivo principal do servidor não encontrado"
-    ((ERROR_COUNT++))
-fi
-
-if [ -f "$APP_DIR/backend/.env" ]; then
-    log "Arquivo de configuração .env encontrado"
+# --- Função para adicionar resultado de check ---
+add_check_result() {
+    local check_name="$1"
+    local status="$2"
+    local details="$3"
     
-    # Verificar variáveis essenciais
-    if grep -q "DB_NAME=" "$APP_DIR/backend/.env" && 
-       grep -q "DB_USER=" "$APP_DIR/backend/.env" && 
-       grep -q "DB_PASSWORD=" "$APP_DIR/backend/.env"; then
-        log "Variáveis de banco de dados configuradas"
-    else
-        error "Variáveis de banco de dados não configuradas corretamente"
-        ((ERROR_COUNT++))
-    fi
-else
-    error "Arquivo de configuração .env não encontrado"
-    ((ERROR_COUNT++))
-fi
-
-if [ -d "$APP_DIR/backend/node_modules" ]; then
-    log "Dependências do backend instaladas"
-else
-    error "Dependências do backend não instaladas"
-    ((ERROR_COUNT++))
-fi
-
-if [ -d "$APP_DIR/backend/uploads" ]; then
-    log "Diretório de uploads configurado"
-else
-    warning "Diretório de uploads não encontrado"
-    ((WARNING_COUNT++))
-fi
-
-# ==============================================================================
-# 2. VERIFICAÇÕES DE USUÁRIO E PERMISSÕES
-# ==============================================================================
-
-info "Verificando usuário e permissões..."
-
-if id -u $APP_USER &>/dev/null; then
-    log "Usuário '$APP_USER' existe"
+    TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     
-    # Verificar propriedade dos arquivos
-    if [ "$(stat -c '%U' $APP_DIR)" == "$APP_USER" ]; then
-        log "Propriedade do diretório da aplicação está correta"
+    if [ "$status" = "PASS" ]; then
+        CHECK_RESULTS+=("✅ $check_name: $details")
+        log "$check_name: PASS - $details"
     else
-        error "Propriedade do diretório da aplicação está incorreta"
-        ((ERROR_COUNT++))
+        CHECK_RESULTS+=("❌ $check_name: $details")
+        error "$check_name: FAIL - $details"
+        FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-else
-    error "Usuário '$APP_USER' não existe"
-    ((ERROR_COUNT++))
-fi
+}
 
-# ==============================================================================
-# 3. VERIFICAÇÕES DE SERVIÇOS
-# ==============================================================================
+# --- Função para verificar se comando existe ---
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-info "Verificando serviços do sistema..."
-
-# PostgreSQL
-if systemctl is-active --quiet postgresql; then
-    log "PostgreSQL está rodando"
+# --- Verificar usuário codeseek ---
+check_user() {
+    step "Verificando usuário codeseek"
     
-    # Testar conexão
-    if sudo -u postgres psql -c "SELECT 1" &>/dev/null; then
-        log "PostgreSQL está respondendo"
+    if id "$USER" &>/dev/null; then
+        local user_home=$(getent passwd "$USER" | cut -d: -f6)
+        add_check_result "Usuário codeseek" "PASS" "Usuário existe com home: $user_home"
     else
-        error "PostgreSQL não está respondendo"
-        ((ERROR_COUNT++))
+        add_check_result "Usuário codeseek" "FAIL" "Usuário não encontrado"
     fi
-else
-    error "PostgreSQL não está rodando"
-    ((ERROR_COUNT++))
-fi
+}
 
-# Redis
-if systemctl is-active --quiet redis-server; then
-    log "Redis está rodando"
+# --- Verificar diretório da aplicação ---
+check_app_directory() {
+    step "Verificando diretório da aplicação"
     
-    # Testar conexão
-    if redis-cli ping | grep -q "PONG"; then
-        log "Redis está respondendo"
+    if [ -d "$APP_DIR" ]; then
+        local owner=$(stat -c '%U' "$APP_DIR")
+        local permissions=$(stat -c '%a' "$APP_DIR")
+        add_check_result "Diretório da aplicação" "PASS" "Existe em $APP_DIR (owner: $owner, perms: $permissions)"
+        
+        # Verificar estrutura de diretórios
+        local missing_dirs=()
+        for dir in "frontend" "backend" "logs"; do
+            if [ ! -d "$APP_DIR/$dir" ]; then
+                missing_dirs+=("$dir")
+            fi
+        done
+        
+        if [ ${#missing_dirs[@]} -eq 0 ]; then
+            add_check_result "Estrutura de diretórios" "PASS" "Todos os diretórios necessários existem"
+        else
+            add_check_result "Estrutura de diretórios" "FAIL" "Diretórios ausentes: ${missing_dirs[*]}"
+        fi
     else
-        error "Redis não está respondendo"
-        ((ERROR_COUNT++))
+        add_check_result "Diretório da aplicação" "FAIL" "Diretório $APP_DIR não encontrado"
     fi
-else
-    error "Redis não está rodando"
-    ((ERROR_COUNT++))
-fi
+}
 
-# Nginx
-if systemctl is-active --quiet nginx; then
-    log "Nginx está rodando"
+# --- Verificar Node.js e npm ---
+check_nodejs() {
+    step "Verificando Node.js e npm"
     
-    # Verificar configuração
-    if nginx -t &>/dev/null; then
-        log "Configuração do Nginx está válida"
+    if command_exists node; then
+        local node_version=$(node --version)
+        add_check_result "Node.js" "PASS" "Versão: $node_version"
     else
-        error "Configuração do Nginx está inválida"
-        ((ERROR_COUNT++))
+        add_check_result "Node.js" "FAIL" "Node.js não encontrado"
     fi
-else
-    error "Nginx não está rodando"
-    ((ERROR_COUNT++))
-fi
+    
+    if command_exists npm; then
+        local npm_version=$(npm --version)
+        add_check_result "npm" "PASS" "Versão: $npm_version"
+        
+        # Verificar se npm funciona para o usuário codeseek
+        if sudo -u "$USER" which npm >/dev/null 2>&1; then
+            add_check_result "npm para usuário codeseek" "PASS" "npm acessível para usuário codeseek"
+        else
+            add_check_result "npm para usuário codeseek" "FAIL" "npm não acessível para usuário codeseek"
+        fi
+    else
+        add_check_result "npm" "FAIL" "npm não encontrado"
+    fi
+}
 
-# CodeSeek Service
-if systemctl is-active --quiet codeseek.service; then
-    log "Serviço CodeSeek está rodando"
-else
-    error "Serviço CodeSeek não está rodando"
-    ((ERROR_COUNT++))
-fi
+# --- Verificar dependências do backend ---
+check_backend_dependencies() {
+    step "Verificando dependências do backend"
+    
+    if [ -f "$APP_DIR/backend/package.json" ]; then
+        add_check_result "package.json" "PASS" "Arquivo encontrado"
+        
+        if [ -d "$APP_DIR/backend/node_modules" ]; then
+            local modules_count=$(find "$APP_DIR/backend/node_modules" -maxdepth 1 -type d | wc -l)
+            add_check_result "node_modules" "PASS" "$modules_count módulos instalados"
+        else
+            add_check_result "node_modules" "FAIL" "Diretório node_modules não encontrado"
+        fi
+    else
+        add_check_result "package.json" "FAIL" "Arquivo não encontrado"
+    fi
+}
+
+# --- Verificar build do frontend ---
+check_frontend_build() {
+    step "Verificando build do frontend"
+    
+    if [ -d "$APP_DIR/frontend/dist" ]; then
+        local files_count=$(find "$APP_DIR/frontend/dist" -type f | wc -l)
+        add_check_result "Build do frontend" "PASS" "$files_count arquivos no diretório dist"
+    else
+        add_check_result "Build do frontend" "FAIL" "Diretório dist não encontrado"
+    fi
+}
+
+# --- Verificar serviço systemd ---
+check_systemd_service() {
+    step "Verificando serviço systemd"
+    
+    if systemctl list-unit-files | grep -q "$SERVICE.service"; then
+        add_check_result "Arquivo de serviço" "PASS" "$SERVICE.service encontrado"
+        
+        local service_status=$(systemctl is-active "$SERVICE" 2>/dev/null || echo "inactive")
+        if [ "$service_status" = "active" ]; then
+            add_check_result "Status do serviço" "PASS" "Serviço está ativo"
+        else
+            add_check_result "Status do serviço" "FAIL" "Serviço não está ativo (status: $service_status)"
+        fi
+        
+        local service_enabled=$(systemctl is-enabled "$SERVICE" 2>/dev/null || echo "disabled")
+        if [ "$service_enabled" = "enabled" ]; then
+            add_check_result "Serviço habilitado" "PASS" "Serviço habilitado para inicialização automática"
+        else
+            add_check_result "Serviço habilitado" "FAIL" "Serviço não habilitado (status: $service_enabled)"
+        fi
+    else
+        add_check_result "Arquivo de serviço" "FAIL" "$SERVICE.service não encontrado"
+    fi
+}
+
+# --- Verificar Nginx ---
+check_nginx() {
+    step "Verificando Nginx"
+    
+    if command_exists nginx; then
+        local nginx_version=$(nginx -v 2>&1 | cut -d' ' -f3)
+        add_check_result "Nginx" "PASS" "Versão: $nginx_version"
+        
+        if [ -f "/etc/nginx/sites-available/codeseek" ]; then
+            add_check_result "Configuração Nginx" "PASS" "Arquivo de configuração encontrado"
+            
+            if [ -L "/etc/nginx/sites-enabled/codeseek" ]; then
+                add_check_result "Site habilitado" "PASS" "Site codeseek habilitado"
+            else
+                add_check_result "Site habilitado" "FAIL" "Site codeseek não habilitado"
+            fi
+            
+            # Testar configuração
+            if nginx -t >/dev/null 2>&1; then
+                add_check_result "Teste de configuração" "PASS" "Configuração Nginx válida"
+            else
+                add_check_result "Teste de configuração" "FAIL" "Configuração Nginx inválida"
+            fi
+        else
+            add_check_result "Configuração Nginx" "FAIL" "Arquivo de configuração não encontrado"
+        fi
+        
+        local nginx_status=$(systemctl is-active nginx 2>/dev/null || echo "inactive")
+        if [ "$nginx_status" = "active" ]; then
+            add_check_result "Status Nginx" "PASS" "Nginx está ativo"
+        else
+            add_check_result "Status Nginx" "FAIL" "Nginx não está ativo (status: $nginx_status)"
+        fi
+    else
+        add_check_result "Nginx" "FAIL" "Nginx não encontrado"
+    fi
+}
+
+# --- Gerar relatório final ---
+generate_report() {
+    step "Relatório Final"
+    
+    echo
+    echo "==========================================="
+    echo "         RELATÓRIO DE VERIFICAÇÃO"
+    echo "==========================================="
+    echo
+    
+    for result in "${CHECK_RESULTS[@]}"; do
+        echo "$result"
+    done
+    
+    echo
+    echo "==========================================="
+    echo "RESUMO: $((TOTAL_CHECKS - FAILED_CHECKS))/$TOTAL_CHECKS verificações passaram"
+    
+    if [ "$FAILED_CHECKS" -eq 0 ]; then
+        log "✅ Todas as verificações passaram! CodeSeek está funcionando corretamente."
+        echo
+        echo "🚀 Próximos passos:"
+        echo "   • Acesse sua aplicação no navegador"
+        echo "   • Configure seu primeiro projeto"
+        echo "   • Monitore os logs em $APP_DIR/logs"
+        return 0
+    else
+        error "❌ $FAILED_CHECKS verificações falharam. Verifique os problemas acima."
+        echo
+        echo "🔧 Para resolver problemas:"
+        echo "   • Execute: sudo ./troubleshoot.sh"
+        echo "   • Verifique logs: sudo journalctl -u $SERVICE -f"
+        echo "   • Reinicie serviços: sudo systemctl restart $SERVICE nginx"
+        return 1
+    fi
+}
+
+# --- Função principal ---
+main() {
+    echo "==========================================="
+    echo "    CodeSeek v1.0 - Verificação Pós-Instalação"
+    echo "==========================================="
+    echo
+    
+    # Verificar se está executando como root
+    if [ "$(id -u)" -ne 0 ]; then
+        error "Este script deve ser executado como root (use sudo)"
+        exit 1
+    fi
+    
+    # Executar todas as verificações
+    check_user
+    check_app_directory
+    check_nodejs
+    check_backend_dependencies
+    check_frontend_build
+    check_systemd_service
+    check_nginx
+    
+    # Gerar relatório final
+    generate_report
+}
+
+# Executar script principal
+main "$@"
 
 # ==============================================================================
 # 4. VERIFICAÇÕES DE BANCO DE DADOS

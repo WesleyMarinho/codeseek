@@ -68,6 +68,15 @@ INSTALL_SCRIPTS=(
     "setup-scripts.sh"
     "help.sh"
     "prepare-release.sh"
+    "monitor.sh"
+    "backup-database.sh"
+)
+
+# Lista de scripts opcionais (não críticos)
+OPTIONAL_SCRIPTS=(
+    "install-auto.sh"
+    "monitor.sh"
+    "backup-database.sh"
 )
 
 # Lista de arquivos de documentação
@@ -98,6 +107,28 @@ info "Data: $RELEASE_DATE"
 
 step "Verificando estrutura do projeto"
 
+# Verificar dependências do sistema
+check_dependencies() {
+    local missing_deps=()
+    
+    # Verificar comandos essenciais
+    local required_commands=("git" "md5sum" "find" "chmod")
+    
+    for cmd in "${required_commands[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            missing_deps+=("$cmd")
+        fi
+    done
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        error "Dependências não encontradas: ${missing_deps[*]}"
+        info "Instale as dependências necessárias antes de continuar"
+        exit 1
+    fi
+    
+    log "Todas as dependências estão disponíveis"
+}
+
 # Verificar diretórios principais
 REQUIRED_DIRS=(
     "backend"
@@ -105,11 +136,25 @@ REQUIRED_DIRS=(
     "database"
 )
 
+OPTIONAL_DIRS=(
+    "docs"
+    "scripts"
+    "config"
+)
+
+check_dependencies
+
 for dir in "${REQUIRED_DIRS[@]}"; do
     if [ -d "$SCRIPT_DIR/$dir" ]; then
         log "Diretório $dir encontrado"
     else
         warning "Diretório $dir não encontrado"
+    fi
+done
+
+for dir in "${OPTIONAL_DIRS[@]}"; do
+    if [ -d "$SCRIPT_DIR/$dir" ]; then
+        info "Diretório opcional $dir encontrado"
     fi
 done
 
@@ -121,6 +166,7 @@ step "Validando scripts de instalação"
 
 MISSING_SCRIPTS=()
 INVALID_SCRIPTS=()
+OPTIONAL_MISSING=()
 
 for script in "${INSTALL_SCRIPTS[@]}"; do
     script_path="$SCRIPT_DIR/$script"
@@ -134,14 +180,29 @@ for script in "${INSTALL_SCRIPTS[@]}"; do
             INVALID_SCRIPTS+=("$script")
         fi
     else
-        warning "$script - Não encontrado"
-        MISSING_SCRIPTS+=("$script")
+        # Verificar se é script opcional
+        if [[ " ${OPTIONAL_SCRIPTS[*]} " =~ " ${script} " ]]; then
+            info "$script - Script opcional não encontrado"
+            OPTIONAL_MISSING+=("$script")
+        else
+            warning "$script - Script obrigatório não encontrado"
+            MISSING_SCRIPTS+=("$script")
+        fi
     fi
 done
 
 if [ ${#INVALID_SCRIPTS[@]} -gt 0 ]; then
     error "Scripts com erro de sintaxe: ${INVALID_SCRIPTS[*]}"
     exit 1
+fi
+
+if [ ${#MISSING_SCRIPTS[@]} -gt 0 ]; then
+    error "Scripts obrigatórios não encontrados: ${MISSING_SCRIPTS[*]}"
+    exit 1
+fi
+
+if [ ${#OPTIONAL_MISSING[@]} -gt 0 ]; then
+    info "Scripts opcionais não encontrados: ${OPTIONAL_MISSING[*]}"
 fi
 
 # ==============================================================================
@@ -160,12 +221,23 @@ for script in "${INSTALL_SCRIPTS[@]}"; do
 done
 
 # Configurar permissões de diretórios
-find "$SCRIPT_DIR" -type d -exec chmod 755 {} \;
-find "$SCRIPT_DIR" -type f -name "*.md" -exec chmod 644 {} \;
-find "$SCRIPT_DIR" -type f -name "*.json" -exec chmod 644 {} \;
-find "$SCRIPT_DIR" -type f -name "*.js" -exec chmod 644 {} \;
-find "$SCRIPT_DIR" -type f -name "*.css" -exec chmod 644 {} \;
-find "$SCRIPT_DIR" -type f -name "*.html" -exec chmod 644 {} \;
+info "Configurando permissões de diretórios..."
+find "$SCRIPT_DIR" -type d -exec chmod 755 {} \; 2>/dev/null || warning "Erro ao configurar permissões de diretórios"
+
+info "Configurando permissões de arquivos..."
+find "$SCRIPT_DIR" -type f -name "*.md" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.json" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.js" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.css" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.html" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.txt" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.yml" -exec chmod 644 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*.yaml" -exec chmod 644 {} \; 2>/dev/null
+
+# Proteger arquivos sensíveis
+find "$SCRIPT_DIR" -type f -name "*.env*" -exec chmod 600 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*key*" -exec chmod 600 {} \; 2>/dev/null
+find "$SCRIPT_DIR" -type f -name "*secret*" -exec chmod 600 {} \; 2>/dev/null
 
 log "Permissões configuradas"
 
@@ -175,18 +247,38 @@ log "Permissões configuradas"
 
 step "Validando documentação"
 
+MISSING_DOCS=()
+EMPTY_DOCS=()
+
 for doc in "${DOC_FILES[@]}"; do
-    if [ -f "$SCRIPT_DIR/$doc" ]; then
+    doc_path="$SCRIPT_DIR/$doc"
+    if [ -f "$doc_path" ]; then
         # Verificar se não está vazio
-        if [ -s "$SCRIPT_DIR/$doc" ]; then
-            log "$doc - OK"
+        if [ -s "$doc_path" ]; then
+            # Verificar se tem conteúdo mínimo (mais de 10 linhas)
+            local line_count=$(wc -l < "$doc_path" 2>/dev/null || echo "0")
+            if [ "$line_count" -gt 10 ]; then
+                log "$doc - OK ($line_count linhas)"
+            else
+                warning "$doc - Conteúdo muito pequeno ($line_count linhas)"
+            fi
         else
             warning "$doc - Arquivo vazio"
+            EMPTY_DOCS+=("$doc")
         fi
     else
         warning "$doc - Não encontrado"
+        MISSING_DOCS+=("$doc")
     fi
 done
+
+if [ ${#MISSING_DOCS[@]} -gt 0 ]; then
+    warning "Documentação não encontrada: ${MISSING_DOCS[*]}"
+fi
+
+if [ ${#EMPTY_DOCS[@]} -gt 0 ]; then
+    warning "Documentação vazia: ${EMPTY_DOCS[*]}"
+fi
 
 # ==============================================================================
 # 5. CRIAR ARQUIVO DE VERSÃO
@@ -211,17 +303,46 @@ log "Arquivo VERSION criado"
 step "Gerando checksums"
 
 # Gerar checksums dos scripts principais
-echo "# CodeSeek V1 - Checksums" > "$SCRIPT_DIR/CHECKSUMS.md5"
-echo "# Gerado em: $(date)" >> "$SCRIPT_DIR/CHECKSUMS.md5"
-echo "" >> "$SCRIPT_DIR/CHECKSUMS.md5"
+CHECKSUM_FILE="$SCRIPT_DIR/CHECKSUMS.md5"
+echo "# CodeSeek V1 - Checksums" > "$CHECKSUM_FILE"
+echo "# Gerado em: $(date)" >> "$CHECKSUM_FILE"
+echo "# Versão: $VERSION" >> "$CHECKSUM_FILE"
+echo "" >> "$CHECKSUM_FILE"
 
+info "Gerando checksums dos scripts..."
 for script in "${INSTALL_SCRIPTS[@]}"; do
     if [ -f "$SCRIPT_DIR/$script" ]; then
-        md5sum "$script" >> "$SCRIPT_DIR/CHECKSUMS.md5"
+        if md5sum "$script" >> "$CHECKSUM_FILE" 2>/dev/null; then
+            info "Checksum gerado para $script"
+        else
+            warning "Erro ao gerar checksum para $script"
+        fi
     fi
 done
 
-log "Checksums gerados"
+info "Gerando checksums da documentação..."
+for doc in "${DOC_FILES[@]}"; do
+    if [ -f "$SCRIPT_DIR/$doc" ]; then
+        if md5sum "$doc" >> "$CHECKSUM_FILE" 2>/dev/null; then
+            info "Checksum gerado para $doc"
+        else
+            warning "Erro ao gerar checksum para $doc"
+        fi
+    fi
+done
+
+info "Gerando checksums dos arquivos de configuração..."
+for config in "${CONFIG_FILES[@]}"; do
+    if [ -f "$SCRIPT_DIR/$config" ]; then
+        if md5sum "$config" >> "$CHECKSUM_FILE" 2>/dev/null; then
+            info "Checksum gerado para $config"
+        else
+            warning "Erro ao gerar checksum para $config"
+        fi
+    fi
+done
+
+log "Checksums gerados em $CHECKSUM_FILE"
 
 # ==============================================================================
 # 7. CRIAR ARQUIVO DE RELEASE NOTES
@@ -370,11 +491,29 @@ log "Script de verificação criado"
 step "Executando configuração de scripts"
 
 if [ -f "$SCRIPT_DIR/setup-scripts.sh" ]; then
-    bash "$SCRIPT_DIR/setup-scripts.sh"
-    log "Scripts configurados"
+    info "Executando setup-scripts.sh..."
+    if bash "$SCRIPT_DIR/setup-scripts.sh" >/dev/null 2>&1; then
+        log "Scripts configurados com sucesso"
+    else
+        warning "Erro na configuração de scripts (continuando...)"
+    fi
 else
-    warning "setup-scripts.sh não encontrado"
+    warning "setup-scripts.sh não encontrado (opcional)"
 fi
+
+# Verificar se todos os scripts necessários estão executáveis
+info "Verificando permissões de execução..."
+for script in "${INSTALL_SCRIPTS[@]}"; do
+    script_path="$SCRIPT_DIR/$script"
+    if [ -f "$script_path" ]; then
+        if [ -x "$script_path" ]; then
+            info "$script é executável"
+        else
+            warning "$script não é executável, corrigindo..."
+            chmod +x "$script_path"
+        fi
+    fi
+done
 
 # ==============================================================================
 # 10. CRIAR ARQUIVO DE DISTRIBUIÇÃO
@@ -434,14 +573,20 @@ log "Informações de distribuição criadas"
 step "Verificação final"
 
 # Executar verificação de integridade
-if bash "$SCRIPT_DIR/verify-integrity.sh" >/dev/null 2>&1; then
-    log "Verificação de integridade passou"
+info "Executando verificação de integridade..."
+if [ -f "$SCRIPT_DIR/verify-integrity.sh" ]; then
+    if bash "$SCRIPT_DIR/verify-integrity.sh" >/dev/null 2>&1; then
+        log "Verificação de integridade passou"
+    else
+        error "Verificação de integridade falhou"
+        exit 1
+    fi
 else
-    error "Verificação de integridade falhou"
-    exit 1
+    warning "Script de verificação de integridade não encontrado"
 fi
 
 # Verificar se todos os scripts são executáveis
+info "Verificando permissões finais..."
 NON_EXECUTABLE=()
 for script in "${INSTALL_SCRIPTS[@]}"; do
     if [ -f "$SCRIPT_DIR/$script" ] && [ ! -x "$SCRIPT_DIR/$script" ]; then
@@ -454,10 +599,35 @@ if [ ${#NON_EXECUTABLE[@]} -gt 0 ]; then
     exit 1
 fi
 
+# Verificar se arquivos críticos existem
+info "Verificando arquivos críticos..."
+CRITICAL_FILES=("VERSION" "CHECKSUMS.md5" "RELEASE-NOTES.md" "verify-integrity.sh")
+MISSING_CRITICAL=()
+
+for file in "${CRITICAL_FILES[@]}"; do
+    if [ ! -f "$SCRIPT_DIR/$file" ]; then
+        MISSING_CRITICAL+=("$file")
+    fi
+done
+
+if [ ${#MISSING_CRITICAL[@]} -gt 0 ]; then
+    error "Arquivos críticos não encontrados: ${MISSING_CRITICAL[*]}"
+    exit 1
+fi
+
 # Contar arquivos
-TOTAL_FILES=$(find "$SCRIPT_DIR" -type f | wc -l)
-TOTAL_SCRIPTS=$(find "$SCRIPT_DIR" -name "*.sh" -type f | wc -l)
-TOTAL_DOCS=$(find "$SCRIPT_DIR" -name "*.md" -type f | wc -l)
+info "Coletando estatísticas..."
+TOTAL_FILES=$(find "$SCRIPT_DIR" -type f 2>/dev/null | wc -l)
+TOTAL_SCRIPTS=$(find "$SCRIPT_DIR" -name "*.sh" -type f 2>/dev/null | wc -l)
+TOTAL_DOCS=$(find "$SCRIPT_DIR" -name "*.md" -type f 2>/dev/null | wc -l)
+TOTAL_CONFIG=$(find "$SCRIPT_DIR" -name "*.json" -o -name "*.yml" -o -name "*.yaml" -type f 2>/dev/null | wc -l)
+TOTAL_SIZE=$(du -sh "$SCRIPT_DIR" 2>/dev/null | cut -f1 || echo "N/A")
+
+# Verificar se há arquivos Git
+GIT_STATUS="N/A"
+if command -v git >/dev/null 2>&1 && [ -d "$SCRIPT_DIR/.git" ]; then
+    GIT_STATUS="$(git status --porcelain 2>/dev/null | wc -l) arquivos modificados"
+fi
 
 # ==============================================================================
 # 12. RELATÓRIO FINAL
@@ -471,8 +641,11 @@ echo -e "${CYAN}📊 Estatísticas:${NC}"
 echo -e "   📁 Total de arquivos: ${BLUE}$TOTAL_FILES${NC}"
 echo -e "   🔧 Scripts: ${BLUE}$TOTAL_SCRIPTS${NC}"
 echo -e "   📚 Documentação: ${BLUE}$TOTAL_DOCS${NC}"
+echo -e "   ⚙️  Configuração: ${BLUE}$TOTAL_CONFIG${NC}"
+echo -e "   💾 Tamanho total: ${BLUE}$TOTAL_SIZE${NC}"
 echo -e "   📅 Data: ${BLUE}$RELEASE_DATE${NC}"
 echo -e "   🏷️  Versão: ${BLUE}$VERSION${NC}"
+echo -e "   🔄 Git status: ${BLUE}$GIT_STATUS${NC}"
 
 echo -e "\n${CYAN}📋 Scripts Principais:${NC}"
 for script in "${INSTALL_SCRIPTS[@]}"; do
@@ -496,11 +669,13 @@ echo -e "   ✅ ${BLUE}verify-integrity.sh${NC}"
 echo -e "   📦 ${BLUE}DISTRIBUTION.md${NC}"
 
 echo -e "\n${CYAN}🚀 Próximos Passos:${NC}"
-echo -e "   1. Teste a instalação: ${BLUE}sudo bash deploy.sh${NC}"
+echo -e "   1. Teste a instalação: ${BLUE}sudo bash deploy.sh meudominio.com admin@email.com${NC}"
 echo -e "   2. Verifique integridade: ${BLUE}bash verify-integrity.sh${NC}"
 echo -e "   3. Leia a documentação: ${BLUE}cat README-INSTALL.md${NC}"
-echo -e "   4. Crie release no GitHub"
-echo -e "   5. Distribua para usuários"
+echo -e "   4. Execute verificação pós-instalação: ${BLUE}bash post-install-check.sh${NC}"
+echo -e "   5. Crie release no GitHub com tag v$VERSION"
+echo -e "   6. Distribua para usuários"
+echo -e "   7. Monitore logs: ${BLUE}bash monitor.sh${NC}"
 
 echo -e "\n${CYAN}📦 Comando de Distribuição:${NC}"
 echo -e "   ${BLUE}tar -czf codeseek-v$VERSION.tar.gz *${NC}"
@@ -509,8 +684,31 @@ echo -e "\n${GREEN}✅ Preparação concluída com sucesso!${NC}"
 echo -e "${GREEN}🎯 CodeSeek V1 v$VERSION está pronto para uso!${NC}\n"
 
 # Salvar log da preparação
-echo "Preparação para release concluída em $(date)" > "$SCRIPT_DIR/prepare.log"
-echo "Versão: $VERSION" >> "$SCRIPT_DIR/prepare.log"
-echo "Scripts: ${INSTALL_SCRIPTS[*]}" >> "$SCRIPT_DIR/prepare.log"
-echo "Documentação: ${DOC_FILES[*]}" >> "$SCRIPT_DIR/prepare.log"
-echo "Total de arquivos: $TOTAL_FILES" >> "$SCRIPT_DIR/prepare.log"
+PREPARE_LOG="$SCRIPT_DIR/prepare.log"
+echo "# CodeSeek V1 - Log de Preparação" > "$PREPARE_LOG"
+echo "Preparação para release concluída em $(date)" >> "$PREPARE_LOG"
+echo "Versão: $VERSION" >> "$PREPARE_LOG"
+echo "Data de release: $RELEASE_DATE" >> "$PREPARE_LOG"
+echo "" >> "$PREPARE_LOG"
+echo "## Estatísticas" >> "$PREPARE_LOG"
+echo "Total de arquivos: $TOTAL_FILES" >> "$PREPARE_LOG"
+echo "Scripts: $TOTAL_SCRIPTS" >> "$PREPARE_LOG"
+echo "Documentação: $TOTAL_DOCS" >> "$PREPARE_LOG"
+echo "Configuração: $TOTAL_CONFIG" >> "$PREPARE_LOG"
+echo "Tamanho total: $TOTAL_SIZE" >> "$PREPARE_LOG"
+echo "Git status: $GIT_STATUS" >> "$PREPARE_LOG"
+echo "" >> "$PREPARE_LOG"
+echo "## Scripts Incluídos" >> "$PREPARE_LOG"
+printf '%s\n' "${INSTALL_SCRIPTS[@]}" >> "$PREPARE_LOG"
+echo "" >> "$PREPARE_LOG"
+echo "## Documentação Incluída" >> "$PREPARE_LOG"
+printf '%s\n' "${DOC_FILES[@]}" >> "$PREPARE_LOG"
+echo "" >> "$PREPARE_LOG"
+echo "## Scripts Opcionais Não Encontrados" >> "$PREPARE_LOG"
+if [ ${#OPTIONAL_MISSING[@]} -gt 0 ]; then
+    printf '%s\n' "${OPTIONAL_MISSING[@]}" >> "$PREPARE_LOG"
+else
+    echo "Nenhum" >> "$PREPARE_LOG"
+fi
+
+log "Log de preparação salvo em $PREPARE_LOG"
