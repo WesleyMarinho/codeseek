@@ -4,7 +4,8 @@
   "description": "Frontend for CodeSeek application",
   "scripts": {
     "build-css": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.css --watch",
-    "build-css-prod": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.css --minify"
+    "build-css-prod": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.css --minify",
+    "build": "npm run build-css-prod"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.0"
