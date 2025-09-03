@@ -8,7 +8,7 @@
 # sem necessidade de intervenção manual.
 #
 # Uso:
-#   curl -fsSL https://raw.githubusercontent.com/seu-usuario/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
+#   curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
 #
 # Ou localmente:
 #   sudo bash one-line-install.sh yourdomain.com admin@yourdomain.com [db_name] [db_user]
@@ -341,11 +341,17 @@ elif [ -d "$(dirname "$0")/.git" ]; then
     REPO_URL=$(cd "$(dirname "$0")" && git config --get remote.origin.url 2>/dev/null || echo "")
 else
     # URL padrão - ajuste conforme necessário
-    REPO_URL="https://github.com/seu-usuario/codeseek.git"
+    REPO_URL="https://github.com/WesleyMarinho/codeseek.git"
 fi
 
 if [ -n "$REPO_URL" ]; then
     info "Clonando de: $REPO_URL"
+    # Verificar se o diretório está vazio antes do clone
+    if [ "$(ls -A $APP_DIR 2>/dev/null)" ]; then
+        warning "Diretório não está vazio, removendo conteúdo anterior..."
+        rm -rf "$APP_DIR"/*
+        rm -rf "$APP_DIR"/.[!.]* 2>/dev/null || true
+    fi
     sudo -u codeseek git clone "$REPO_URL" .
 else
     warning "URL do repositório não detectada, copiando arquivos locais..."

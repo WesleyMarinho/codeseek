@@ -242,7 +242,7 @@ echo -e "   \033[0;34mREADME.md\033[0m                 - Documentação do proje
 echo
 
 echo -e "\033[0;33m🔗 Links Úteis:\033[0m"
-echo -e "   Repositório: https://github.com/seu-usuario/codeseek"
+echo -e "   Repositório: https://github.com/WesleyMarinho/codeseek"
 echo -e "   Documentação: https://docs.codeseek.com"
 echo -e "   Suporte: https://support.codeseek.com"
 echo

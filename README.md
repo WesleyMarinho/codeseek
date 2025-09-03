@@ -77,8 +77,45 @@ CodeSeek/
 - PostgreSQL 14+
 - Redis 6+
 - Git
+- Ubuntu/Debian Linux (for automated installation)
 
-### Local Development Installation
+### 🎯 One-Line Automated Installation (Recommended)
+
+For production deployment on Ubuntu/Debian servers:
+
+```bash
+# Complete automated installation with domain and admin email
+curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
+```
+
+**What the automated installer does:**
+- ✅ Installs all system dependencies (Node.js, PostgreSQL, Redis, Nginx)
+- ✅ Creates dedicated `codeseek` user for security
+- ✅ Clones and configures the application
+- ✅ Sets up SSL certificates with Let's Encrypt
+- ✅ Configures Nginx reverse proxy
+- ✅ Creates systemd service for auto-start
+- ✅ Runs security hardening
+- ✅ Provides post-installation verification
+
+**Installation Parameters:**
+- `DOMAIN`: Your domain name (required)
+- `ADMIN_EMAIL`: Admin email for SSL certificates (required)
+- `DB_PASSWORD`: Custom database password (optional)
+- `APP_SECRET`: Custom app secret (optional)
+
+### 📋 Available Installation Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `one-line-install.sh` | Complete automated installation | Production deployment |
+| `install-auto.sh` | Interactive installation with prompts | Custom configurations |
+| `pre-install-check.sh` | System requirements verification | Pre-deployment check |
+| `post-install-check.sh` | Installation verification | Post-deployment validation |
+| `troubleshoot.sh` | Diagnostic and repair tools | Issue resolution |
+| `setup-scripts.sh` | Script management utility | Development/maintenance |
+
+### 🔧 Manual Local Development Installation
 
 1. **Clone the repository**
    ```bash
@@ -125,6 +162,60 @@ CodeSeek/
    - Marketplace: `http://localhost:3000`
    - Admin Dashboard: `http://localhost:3000/admin`
    - User Dashboard: `http://localhost:3000/dashboard`
+
+### 🔍 Post-Installation Verification
+
+After installation, verify your deployment:
+
+```bash
+# Run post-installation checks
+sudo bash /opt/codeseek/post-install-check.sh
+
+# Check application status
+sudo systemctl status codeseek
+
+# View application logs
+sudo journalctl -u codeseek -f
+```
+
+### 🛠️ Troubleshooting Common Issues
+
+#### Services with Pending Restart
+If you see services requiring restart after installation:
+
+```bash
+# Restart system services
+sudo systemctl restart NetworkManager.service
+sudo systemctl restart getty@tty1.service
+sudo systemctl restart lightdm.service
+sudo systemctl restart networkd-dispatcher.service
+sudo systemctl restart systemd-logind.service
+sudo systemctl restart unattended-upgrades.service
+
+# Restart user sessions if needed
+sudo systemctl restart user@$(id -u).service
+```
+
+#### Repository Clone Issues
+If you encounter "directory not empty" errors:
+
+```bash
+# The installer automatically handles this, but for manual fixes:
+sudo rm -rf /opt/codeseek/*
+sudo rm -rf /opt/codeseek/.[!.]*
+sudo -u codeseek git clone https://github.com/WesleyMarinho/codeseek.git /opt/codeseek
+```
+
+#### Application Diagnostics
+Run comprehensive diagnostics:
+
+```bash
+# Full system troubleshooting
+sudo bash /opt/codeseek/troubleshoot.sh
+
+# Application-specific diagnostics
+cd /opt/codeseek/backend && sudo -u codeseek node diagnose.js
+```
 
 ## 🐳 Docker Setup
 
@@ -195,7 +286,16 @@ npm run format       # Format code with Prettier
 
 ## 🗺️ Roadmap
 
-See [ROADMAP.md](./ROADMAP.md) for detailed development roadmap and future plans.
+### Current Development Focus
+- ✅ **Core Marketplace**: Fully functional with product management
+- ✅ **License System**: Automated generation and validation
+- ✅ **Payment Integration**: Chargebee subscription management
+- ✅ **Security**: CSP implementation and secure event handling
+- ✅ **Admin Dashboard**: Comprehensive management tools
+- ✅ **Automated Deployment**: One-line installation system
+- 🔄 **API Documentation**: In progress
+- ⏳ **CI/CD Pipeline**: Planned for Q1 2025
+- ⏳ **Multi-language Support**: Planned for Q2 2025
 
 ## 🤝 Contributing
 
@@ -211,10 +311,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- 🐛 Issues: [GitHub Issues](https://github.com/WesleyMarinho/codeseek/issues)
-- 📖 Documentation: [Project Wiki](https://github.com/WesleyMarinho/codeseek/wiki)
-- 🗺️ Roadmap: [ROADMAP.md](./ROADMAP.md)
-- 💬 Discussions: [GitHub Discussions](https://github.com/WesleyMarinho/codeseek/discussions)
+### Getting Help
+- 🐛 **Issues**: [GitHub Issues](https://github.com/WesleyMarinho/codeseek/issues)
+- 📖 **Documentation**: [Project Wiki](https://github.com/WesleyMarinho/codeseek/wiki)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/WesleyMarinho/codeseek/discussions)
+
+### Troubleshooting Tools
+- 🔧 **System Check**: `sudo bash /opt/codeseek/pre-install-check.sh`
+- ✅ **Post-Install Verification**: `sudo bash /opt/codeseek/post-install-check.sh`
+- 🛠️ **Troubleshooting**: `sudo bash /opt/codeseek/troubleshoot.sh`
+- 📊 **Application Diagnostics**: `cd /opt/codeseek/backend && sudo -u codeseek node diagnose.js`
 
 ## 🏆 Current Status
 
@@ -223,11 +329,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ **Payment Integration**: Chargebee subscription management
 - ✅ **Security**: CSP implementation and secure event handling
 - ✅ **Admin Dashboard**: Comprehensive management tools
+- ✅ **Automated Deployment**: One-line installation system
+- ✅ **Production Ready**: Complete deployment automation
+- ✅ **Troubleshooting Tools**: Comprehensive diagnostic scripts
 - ✅ **Responsive Design**: Mobile-first approach
 - 🔄 **API Documentation**: In progress
 - ⏳ **CI/CD Pipeline**: Planned for Q1 2025
 
+### 🚀 Latest Updates (v1.0.0)
+- **Automated Installation**: Complete one-line deployment system
+- **Security Hardening**: Production-ready security configurations
+- **Troubleshooting Suite**: Comprehensive diagnostic and repair tools
+- **Documentation Consolidation**: Streamlined installation guides
+- **Repository Corrections**: Fixed all deployment script URLs
+
 ---
 
-*Last updated: January 2025 - Version 3.0*
+*Last updated: January 2025 - Version 1.0.0*
 

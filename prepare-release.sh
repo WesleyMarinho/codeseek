@@ -268,7 +268,7 @@ cat > "$SCRIPT_DIR/RELEASE-NOTES.md" << EOF
 
 \`\`\`bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/codeseek.git
+git clone https://github.com/WesleyMarinho/codeseek.git
 cd codeseek
 
 # Execute o deploy automático
@@ -307,10 +307,10 @@ sudo bash deploy.sh meudominio.com admin@meudominio.com
 
 ### 🔗 Links Úteis
 
-- **Repositório**: https://github.com/seu-usuario/codeseek
+- **Repositório**: https://github.com/WesleyMarinho/codeseek
 - **Documentação**: https://docs.codeseek.com
 - **Suporte**: https://support.codeseek.com
-- **Issues**: https://github.com/seu-usuario/codeseek/issues
+- **Issues**: https://github.com/WesleyMarinho/codeseek/issues
 
 ---
 
