@@ -2,14 +2,36 @@
 
 ## 🚀 Instalação Rápida (Recomendado)
 
+### OPÇÃO 1: Instalação Direta com Argumentos
+```bash
+# Com domínio personalizado e SSL automático
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh)" -- meudominio.com admin@meudominio.com
+
+# Ou apenas com IP (sem domínio personalizado)
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh)" -- localhost
+```
+
+### OPÇÃO 2: Download e Instalação Interativa
+```bash
+# Baixar script
+wget https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh
+chmod +x install-vps.sh
+
+# Executar com interação
+sudo ./install-vps.sh
+```
+
+### OPÇÃO 3: Via Clone do Repositório  
 ```bash
 # Clone o repositório
 git clone https://github.com/WesleyMarinho/codeseek.git
 cd codeseek
 
 # Execute o script de instalação
-sudo bash install-vps.sh
+sudo bash install-vps.sh meudominio.com admin@meudominio.com
 ```
+
+⚠️ **IMPORTANTE:** A instalação via `curl | bash` não suporta entrada interativa. Use sempre os métodos acima.
 
 ## 📋 O que o script instala
 

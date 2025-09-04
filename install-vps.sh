@@ -511,12 +511,32 @@ initialize_database() {
 start_application() {
     log "Iniciando aplicação com PM2..."
     cd "$APP_DIR"
+    
+    # Parar qualquer processo PM2 existente do root
+    pm2 kill >/dev/null 2>&1 || true
+    
+    # Iniciar aplicação como usuário codeseek
     sudo -u "$APP_USER" pm2 start ecosystem.config.js --env production
     sudo -u "$APP_USER" pm2 save
     
-    # Configurar PM2 para iniciar no boot
-    pm2 startup
-    sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER"
+    # Configurar PM2 para iniciar no boot como usuário codeseek
+    sudo -u "$APP_USER" pm2 startup
+    
+    # Aplicar configuração de startup
+    local startup_command=$(sudo -u "$APP_USER" pm2 startup 2>/dev/null | grep -E "^sudo.*systemctl.*enable" | head -1)
+    if [[ -n "$startup_command" ]]; then
+        eval "$startup_command" 2>/dev/null || warning "Falha ao configurar startup automático do PM2"
+    fi
+    
+    # Verificar se aplicação está rodando
+    sleep 3
+    if sudo -u "$APP_USER" pm2 list | grep -q "online"; then
+        log "✅ Aplicação iniciada com sucesso"
+    else
+        warning "Aplicação pode não ter iniciado corretamente"
+        log "Verificando logs..."
+        sudo -u "$APP_USER" pm2 logs codeseek --lines 5 || true
+    fi
 }
 
 # Status da instalação
