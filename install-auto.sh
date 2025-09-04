@@ -121,6 +121,16 @@ if ! command -v node &> /dev/null || [[ $(node -v | cut -d'v' -f2 | cut -d'.' -f
 else
     log "Node.js v18.x ou superior já está instalado."
 fi
+
+# Garantir que o npm esteja disponível
+if ! command -v npm >/dev/null 2>&1; then
+    warning "npm não encontrado, instalando pacote npm..."
+    apt-get install -y npm || error "Falha ao instalar npm"
+fi
+if ! command -v npm >/dev/null 2>&1; then
+    error "npm não encontrado após tentativa de instalação"
+fi
+
 log "Versões instaladas: Node.js $(node -v), npm $(npm -v)"
 
 # 4. Instalar PM2
