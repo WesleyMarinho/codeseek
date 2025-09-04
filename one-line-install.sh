@@ -1,23 +1,17 @@
 #!/bin/bash
 
 # ==============================================================================
-# CodeSeek V1 - Instalação Automática em Uma Linha
+# CodeSeek V1 - Instalação Automática em Uma Linha (Versão Corrigida)
 # ==============================================================================
 #
 # Este script automatiza completamente a instalação do CodeSeek V1
-# sem necessidade de intervenção manual.
+# e inclui uma verificação robusta para instalações corrompidas do Node.js.
 #
 # Uso:
-#   curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
+#   curl -fsSL <URL_DO_SCRIPT_CORRIGIDO> | sudo bash -s -- yourdomain.com admin@yourdomain.com
 #
 # Ou localmente:
-#   sudo bash one-line-install.sh yourdomain.com admin@yourdomain.com [db_name] [db_user]
-#
-# Parâmetros:
-#   $1 - DOMAIN (obrigatório): Domínio da aplicação (ex: codeseek.com)
-#   $2 - SSL_EMAIL (obrigatório): Email para certificado SSL
-#   $3 - DB_NAME (opcional): Nome do banco de dados (padrão: codeseek_db)
-#   $4 - DB_USER (opcional): Usuário do banco de dados (padrão: codeseek_user)
+#   sudo bash install-codeseek.sh yourdomain.com admin@yourdomain.com [db_name] [db_user]
 #
 # ==============================================================================
 
@@ -69,7 +63,6 @@ wait_for_service() {
     local max_attempts=30
     local attempt=1
     
-    # No WSL, alguns serviços podem não funcionar normalmente
     if [ "$WSL_DETECTED" = "true" ]; then
         warning "WSL detectado - pulando verificação de serviço para $service"
         return 0
@@ -116,7 +109,6 @@ backup_existing_configs() {
     local backup_dir="/tmp/codeseek-backup-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$backup_dir"
     
-    # Backup de configurações existentes
     [ -f "/etc/nginx/sites-enabled/codeseek" ] && cp "/etc/nginx/sites-enabled/codeseek" "$backup_dir/"
     [ -f "/etc/systemd/system/codeseek.service" ] && cp "/etc/systemd/system/codeseek.service" "$backup_dir/"
     [ -d "/opt/codeseek" ] && cp -r "/opt/codeseek/.env" "$backup_dir/" 2>/dev/null || true
@@ -134,39 +126,31 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
-# Parâmetros obrigatórios
 DOMAIN="$1"
 SSL_EMAIL="$2"
-
-# Parâmetros opcionais com valores padrão
 DB_NAME="${3:-codeseek_db}"
 DB_USER="${4:-codeseek_user}"
 
-# Validação de domínio
 if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
     error "Domínio inválido: $DOMAIN"
     exit 1
 fi
 
-# Validação de email
 if [[ ! "$SSL_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
     error "Email inválido: $SSL_EMAIL"
     exit 1
 fi
 
-# Verificar se está rodando como root
 if [ "$(id -u)" -ne 0 ]; then
     error "Este script deve ser executado como root (use sudo)"
     exit 1
 fi
 
-# Verificar sistema operacional
 if [ ! -f /etc/debian_version ]; then
     error "Este script é compatível apenas com sistemas Debian/Ubuntu"
     exit 1
 fi
 
-# Detectar WSL e ajustar configurações
 if grep -qi microsoft /proc/version 2>/dev/null; then
     warning "WSL detectado - algumas funcionalidades podem ser limitadas"
     export WSL_DETECTED=true
@@ -194,16 +178,13 @@ info "Usuário da aplicação: codeseek"
 echo -e "\n${YELLOW}A instalação começará em 5 segundos...${NC}"
 sleep 5
 
-# Verificar conectividade
 step "Verificando conectividade"
 check_connectivity
 log "Conectividade OK"
 
-# Verificar espaço em disco
 step "Verificando espaço em disco"
 check_disk_space
 
-# Backup de configurações existentes
 step "Fazendo backup de configurações existentes"
 backup_existing_configs
 
@@ -239,47 +220,41 @@ apt-get install -y -qq \
     htop \
     nano \
     vim
-
 log "Dependências básicas instaladas"
 
 # ==============================================================================
-# 3. INSTALAÇÃO DO NODE.JS
+# 3. INSTALAÇÃO DO NODE.JS (VERSÃO CORRIGIDA)
 # ==============================================================================
 
-step "Instalando Node.js 18.x"
-if ! command_exists node || [[ "$(node --version)" != v18* ]]; then
+step "Verificando e instalando Node.js 18.x"
+# Condição de reinstalação:
+# 1. Se 'node' não existe
+# 2. Se 'npm' não existe (corrige o problema de instalação incompleta)
+# 3. Se a versão do 'node' não é a 18.x
+if ! command_exists node || ! command_exists npm || [[ "$(node --version 2>/dev/null)" != v18* ]]; then
+    info "Node.js/npm não encontrado ou em estado inconsistente. Realizando instalação/reinstalação completa."
+
+    # Passo 1: Remover qualquer instalação anterior para garantir um ambiente limpo
+    warning "Removendo versões anteriores do Node.js e npm..."
+    apt-get purge -y nodejs npm >/dev/null 2>&1
+    apt-get autoremove -y >/dev/null 2>&1
+    rm -f /etc/apt/sources.list.d/nodesource.list
+
+    # Passo 2: Instalar a versão correta do Node.js 18.x
+    info "Adicionando repositório NodeSource e instalando Node.js v18..."
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
     apt-get install -y nodejs
-    
-    # Verificar instalação
+
+    # Passo 3: Verificação pós-instalação
     if ! command_exists node || ! command_exists npm; then
-        error "Falha na instalação do Node.js"
+        error "Falha crítica na reinstalação do Node.js e npm. A instalação não pode continuar."
         exit 1
     fi
-    
-    # Garantir que npm está no PATH para sudo
-    NPM_PATH=$(which npm)
-    if [ -n "$NPM_PATH" ]; then
-        ln -sf "$NPM_PATH" /usr/local/bin/npm 2>/dev/null || true
-    fi
-    
-    log "Node.js $(node --version) instalado"
-    log "npm $(npm --version) instalado"
+    log "Node.js $(node --version) e npm $(npm --version) instalados com sucesso."
 else
-    log "Node.js já está instalado: $(node --version)"
-    # Verificar se npm está acessível
-    if ! command_exists npm; then
-        warning "npm não encontrado no PATH, tentando corrigir..."
-        NPM_PATH=$(find /usr -name npm -type f 2>/dev/null | head -1)
-        if [ -n "$NPM_PATH" ]; then
-            ln -sf "$NPM_PATH" /usr/local/bin/npm
-            log "npm PATH corrigido"
-        else
-            error "npm não encontrado no sistema"
-            exit 1
-        fi
-    fi
+    log "Node.js $(node --version) e npm $(npm --version) já estão instalados e na versão correta."
 fi
+
 
 # ==============================================================================
 # 4. INSTALAÇÃO DO PM2
@@ -288,9 +263,9 @@ fi
 step "Instalando PM2"
 if ! command_exists pm2; then
     npm install -g pm2
-    log "PM2 $(pm2 -v) instalado"
+    log "PM2 instalado"
 else
-    log "PM2 já está instalado: $(pm2 -v)"
+    log "PM2 já está instalado"
 fi
 
 # ==============================================================================
@@ -300,11 +275,8 @@ fi
 step "Instalando PostgreSQL"
 if ! command_exists psql; then
     apt-get install -y postgresql postgresql-contrib
-    
-    # Iniciar e habilitar PostgreSQL
     systemctl start postgresql
     systemctl enable postgresql
-    
     wait_for_service postgresql
 else
     log "PostgreSQL já está instalado"
@@ -318,11 +290,8 @@ fi
 step "Instalando Redis"
 if ! command_exists redis-server; then
     apt-get install -y redis-server
-    
-    # Configurar Redis para iniciar automaticamente
     systemctl start redis-server
     systemctl enable redis-server
-    
     wait_for_service redis-server
 else
     log "Redis já está instalado"
@@ -336,11 +305,8 @@ fi
 step "Instalando Nginx"
 if ! command_exists nginx; then
     apt-get install -y nginx
-    
-    # Iniciar e habilitar Nginx
     systemctl start nginx
     systemctl enable nginx
-    
     wait_for_service nginx
 else
     log "Nginx já está instalado"
@@ -377,14 +343,10 @@ fi
 
 step "Configurando diretório da aplicação"
 APP_DIR="/opt/codeseek"
-
-# Remover instalação anterior se existir
-if [ -d "$APP_DIR/.git" ]; then
-    warning "Instalação anterior detectada, fazendo backup..."
+if [ -d "$APP_DIR" ]; then
+    warning "Diretório de aplicação existente. Fazendo backup..."
     mv "$APP_DIR" "/tmp/codeseek-old-$(date +%Y%m%d-%H%M%S)"
 fi
-
-# Criar diretório se não existir
 mkdir -p "$APP_DIR"
 chown codeseek:codeseek "$APP_DIR"
 
@@ -393,34 +355,9 @@ chown codeseek:codeseek "$APP_DIR"
 # ==============================================================================
 
 step "Clonando repositório"
-cd "$APP_DIR"
-
-# Detectar URL do repositório (assumindo que está no mesmo diretório)
-if [ -f "/tmp/repo_url.txt" ]; then
-    REPO_URL=$(cat /tmp/repo_url.txt)
-elif [ -d "$(dirname "$0")/.git" ]; then
-    REPO_URL=$(cd "$(dirname "$0")" && git config --get remote.origin.url 2>/dev/null || echo "")
-else
-    # URL padrão - ajuste conforme necessário
-    REPO_URL="https://github.com/WesleyMarinho/codeseek.git"
-fi
-
-if [ -n "$REPO_URL" ]; then
-    info "Clonando de: $REPO_URL"
-    # Verificar se o diretório está vazio antes do clone
-    if [ "$(ls -A $APP_DIR 2>/dev/null)" ]; then
-        warning "Diretório não está vazio, removendo conteúdo anterior..."
-        rm -rf "$APP_DIR"/*
-        rm -rf "$APP_DIR"/.[!.]* 2>/dev/null || true
-    fi
-    sudo -u codeseek git clone "$REPO_URL" .
-else
-    warning "URL do repositório não detectada, copiando arquivos locais..."
-    # Copiar arquivos do diretório atual
-    cp -r "$(dirname "$0")"/* .
-    chown -R codeseek:codeseek .
-fi
-
+REPO_URL="https://github.com/WesleyMarinho/codeseek.git"
+info "Clonando de: $REPO_URL"
+sudo -u codeseek git clone "$REPO_URL" "$APP_DIR"
 log "Código fonte obtido"
 
 # ==============================================================================
@@ -429,20 +366,8 @@ log "Código fonte obtido"
 
 step "Instalando dependências do backend"
 cd "$APP_DIR/backend"
-
 if [ -f "package.json" ]; then
-    # Verificar se npm está disponível para o usuário codeseek
-    if ! sudo -u codeseek which npm >/dev/null 2>&1; then
-        warning "npm não encontrado para usuário codeseek, configurando PATH..."
-        NPM_PATH=$(which npm)
-        if [ -n "$NPM_PATH" ]; then
-            echo "export PATH=\$PATH:$(dirname $NPM_PATH)" >> /home/codeseek/.bashrc
-            echo "export PATH=\$PATH:$(dirname $NPM_PATH)" >> /home/codeseek/.profile
-        fi
-    fi
-    
-    # Instalar dependências com PATH completo
-    sudo -u codeseek env PATH="$PATH" npm install --production
+    sudo -u codeseek npm install --production
     log "Dependências do backend instaladas"
 else
     error "package.json não encontrado em $APP_DIR/backend"
@@ -454,14 +379,11 @@ fi
 # ==============================================================================
 
 step "Configurando variáveis de ambiente"
-
-# Gerar senhas seguras
 DB_PASSWORD=$(generate_password)
 SESSION_SECRET=$(generate_password)
 JWT_SECRET=$(generate_password)
 ENCRYPTION_KEY=$(generate_password)
 
-# Criar arquivo .env
 cat > "$APP_DIR/backend/.env" << EOF
 # Database Configuration
 DB_HOST=localhost
@@ -469,54 +391,43 @@ DB_PORT=5432
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
 DB_PASSWORD=$DB_PASSWORD
-
 # Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
-
 # Application Configuration
 NODE_ENV=production
 PORT=3000
 DOMAIN=$DOMAIN
 APP_URL=https://$DOMAIN
-
 # Security
 SESSION_SECRET=$SESSION_SECRET
 JWT_SECRET=$JWT_SECRET
 ENCRYPTION_KEY=$ENCRYPTION_KEY
-
 # SSL Configuration
 SSL_EMAIL=$SSL_EMAIL
-
 # Upload Configuration
 UPLOAD_DIR=/opt/codeseek/uploads
 MAX_FILE_SIZE=10485760
-
 # Email Configuration (configure conforme necessário)
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=$SSL_EMAIL
-
 # Payment Configuration (configure conforme necessário)
 STRIPE_PUBLIC_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-
 # Analytics (opcional)
 GOOGLE_ANALYTICS_ID=
-
 # Logging
 LOG_LEVEL=info
 LOG_FILE=/opt/codeseek/logs/app.log
 EOF
 
-# Definir permissões seguras
 chown codeseek:codeseek "$APP_DIR/backend/.env"
 chmod 600 "$APP_DIR/backend/.env"
-
 log "Arquivo .env configurado"
 
 # ==============================================================================
@@ -524,8 +435,6 @@ log "Arquivo .env configurado"
 # ==============================================================================
 
 step "Configurando PostgreSQL"
-
-# Criar usuário do banco de dados
 if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
     sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
     log "Usuário '$DB_USER' criado no PostgreSQL"
@@ -534,7 +443,6 @@ else
     log "Senha do usuário '$DB_USER' atualizada"
 fi
 
-# Criar banco de dados
 if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
     sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
     log "Banco de dados '$DB_NAME' criado"
@@ -542,7 +450,6 @@ else
     log "Banco de dados '$DB_NAME' já existe"
 fi
 
-# Conceder privilégios
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
 log "Privilégios concedidos ao usuário '$DB_USER'"
 
@@ -551,19 +458,12 @@ log "Privilégios concedidos ao usuário '$DB_USER'"
 # ==============================================================================
 
 step "Configurando diretórios"
-
-# Criar diretórios necessários
 mkdir -p "$APP_DIR/uploads"
 mkdir -p "$APP_DIR/logs"
 mkdir -p "$APP_DIR/backups"
-
-# Definir permissões
 chown -R codeseek:codeseek "$APP_DIR"
 chmod -R 755 "$APP_DIR"
-chmod 700 "$APP_DIR/uploads"
-chmod 700 "$APP_DIR/logs"
-chmod 700 "$APP_DIR/backups"
-
+chmod 700 "$APP_DIR/uploads" "$APP_DIR/logs" "$APP_DIR/backups"
 log "Diretórios configurados"
 
 # ==============================================================================
@@ -572,8 +472,6 @@ log "Diretórios configurados"
 
 step "Inicializando banco de dados"
 cd "$APP_DIR/backend"
-
-# Executar setup do banco
 if [ -f "setup-database.js" ]; then
     sudo -u codeseek NODE_ENV=production node setup-database.js
     log "Schema do banco de dados criado"
@@ -581,7 +479,6 @@ else
     warning "Script setup-database.js não encontrado"
 fi
 
-# Executar seeds se existir
 if [ -f "seed-database.js" ]; then
     sudo -u codeseek NODE_ENV=production node seed-database.js
     log "Dados iniciais inseridos"
@@ -594,25 +491,13 @@ fi
 # ==============================================================================
 
 step "Compilando frontend"
-cd "$APP_DIR"
-
-# Verificar se existe frontend para compilar
-if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
-    cd "frontend"
-    
-    # Instalar dependências de desenvolvimento
+if [ -d "$APP_DIR/frontend" ] && [ -f "$APP_DIR/frontend/package.json" ]; then
+    cd "$APP_DIR/frontend"
     sudo -u codeseek npm install
-    
-    # Compilar assets
     if grep -q "build" package.json; then
         sudo -u codeseek npm run build
-    elif grep -q "compile" package.json; then
-        sudo -u codeseek npm run compile
     fi
-    
-    # Remover dependências de desenvolvimento
     sudo -u codeseek npm prune --production
-    
     log "Frontend compilado"
 else
     info "Frontend não requer compilação ou não encontrado"
@@ -623,47 +508,28 @@ fi
 # ==============================================================================
 
 step "Configurando Nginx"
-
-# Verificar se Nginx está instalado
-if ! command_exists nginx; then
-    error "Nginx não está instalado"
-    exit 1
-fi
-
-# Remover configuração padrão
 rm -f /etc/nginx/sites-enabled/default
-
-# Criar configuração inicial sem SSL para permitir emissão automática do certificado
 cat > "/etc/nginx/sites-available/codeseek" << EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
-
-    # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
-
-    # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Static files
     location /static/ {
         alias $APP_DIR/frontend/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-
     location /uploads/ {
         alias $APP_DIR/uploads/;
         expires 1y;
         add_header Cache-Control "public";
     }
-
-    # Main application
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -674,76 +540,51 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
-
-        # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
     }
-
-    # Security
     location ~ /\. {
         deny all;
     }
-
-    # File upload size
     client_max_body_size 10M;
 }
 EOF
-
-# Habilitar site
 ln -sf /etc/nginx/sites-available/codeseek /etc/nginx/sites-enabled/
-
-# Testar configuração
-if nginx -t; then
-    log "Configuração do Nginx válida"
-else
+if ! nginx -t; then
     error "Configuração do Nginx inválida"
-    # Restaurar backup se existir
-    if [ -f "/etc/nginx/sites-available/codeseek.backup" ]; then
-        warning "Restaurando configuração anterior..."
-        mv "/etc/nginx/sites-available/codeseek.backup" "/etc/nginx/sites-available/codeseek"
-    fi
     exit 1
 fi
+log "Configuração do Nginx válida"
 
 # ==============================================================================
 # 19. CONFIGURAÇÃO DO PM2
 # ==============================================================================
 
 step "Configurando PM2"
-
-if ! command_exists pm2; then
-    npm install -g pm2
+if [ -f "$APP_DIR/ecosystem.config.js" ]; then
+    su - codeseek -c "pm2 start $APP_DIR/ecosystem.config.js"
+    # O comando de startup do PM2 pode ser interativo; redirecionando para /dev/null
+    env PATH=$PATH:/usr/bin pm2 startup systemd -u codeseek --hp "/home/codeseek" | sudo -E bash -
+    su - codeseek -c "pm2 save"
+    log "PM2 configurado para iniciar com o sistema"
+else
+    error "Arquivo ecosystem.config.js não encontrado!"
+    exit 1
 fi
-
-su - codeseek -c "pm2 start $APP_DIR/ecosystem.config.js"
-pm2 startup systemd -u codeseek --hp $APP_DIR >/dev/null
-su - codeseek -c "pm2 save"
-
-log "PM2 configurado"
 
 # ==============================================================================
 # 20. CONFIGURAÇÃO DO FIREWALL
 # ==============================================================================
 
 step "Configurando firewall"
-
-# Configurar UFW
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
-
-# Permitir SSH
 ufw allow ssh
-
-# Permitir HTTP e HTTPS
 ufw allow 80/tcp
 ufw allow 443/tcp
-
-# Habilitar firewall
 ufw --force enable
-
 log "Firewall configurado"
 
 # ==============================================================================
@@ -751,20 +592,13 @@ log "Firewall configurado"
 # ==============================================================================
 
 step "Configurando SSL"
-
-# Recarregar Nginx antes do SSL
 systemctl reload nginx
-
-# Obter certificado SSL
 if certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --email "$SSL_EMAIL" --redirect; then
     log "Certificado SSL configurado para $DOMAIN"
-    
-    # Configurar renovação automática
     (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
     log "Renovação automática do SSL configurada"
 else
     warning "Falha na configuração do SSL - continuando sem HTTPS"
-    warning "Você pode configurar o SSL manualmente depois com: certbot --nginx -d $DOMAIN"
 fi
 
 # ==============================================================================
@@ -772,14 +606,8 @@ fi
 # ==============================================================================
 
 step "Iniciando serviços"
-
-# Iniciar aplicação com PM2
-su - codeseek -c "pm2 restart codeseek || pm2 start $APP_DIR/ecosystem.config.js"
-su - codeseek -c "pm2 save"
-
-# Recarregar Nginx
+su - codeseek -c "pm2 restart codeseek"
 systemctl reload nginx
-
 log "Todos os serviços iniciados"
 
 # ==============================================================================
@@ -787,28 +615,12 @@ log "Todos os serviços iniciados"
 # ==============================================================================
 
 step "Executando verificação final"
-
-# Aguardar aplicação inicializar
 sleep 10
-
-# Testar conectividade local
-if curl -f http://localhost:3000 >/dev/null 2>&1; then
+if ! curl -s --head http://localhost:3000 | head -n 1 | grep "HTTP/1.1 [23].." > /dev/null; then
+    error "Aplicação não está respondendo corretamente na porta 3000"
+    pm2 logs codeseek --lines 20
+else
     log "Aplicação respondendo na porta 3000"
-else
-    error "Aplicação não está respondendo na porta 3000"
-fi
-
-# Testar Nginx
-if curl -f http://localhost >/dev/null 2>&1; then
-    log "Nginx respondendo na porta 80"
-else
-    warning "Nginx não está respondendo na porta 80"
-fi
-
-# Executar diagnóstico se disponível
-if [ -f "$APP_DIR/backend/diagnose.js" ]; then
-    cd "$APP_DIR/backend"
-    sudo -u codeseek node diagnose.js
 fi
 
 # ==============================================================================
@@ -820,72 +632,33 @@ echo "==============================================="
 echo "    Instalação Concluída com Sucesso!"
 echo "==============================================="
 echo -e "${NC}\n"
-
 echo -e "${GREEN}✓ CodeSeek V1 foi instalado e configurado com sucesso!${NC}\n"
-
 echo -e "${CYAN}📋 Informações da Instalação:${NC}"
 echo -e "   🌐 Domínio: ${BLUE}https://$DOMAIN${NC}"
 echo -e "   📧 Email SSL: ${BLUE}$SSL_EMAIL${NC}"
 echo -e "   🗄️  Banco de dados: ${BLUE}$DB_NAME${NC}"
 echo -e "   👤 Usuário do banco: ${BLUE}$DB_USER${NC}"
-echo -e "   📁 Diretório: ${BLUE}$APP_DIR${NC}"
-echo -e "   👤 Usuário da aplicação: ${BLUE}codeseek${NC}"
-
-echo -e "\n${CYAN}🔐 Credenciais Geradas:${NC}"
+echo -e "\n${CYAN}🔐 Credenciais Geradas (salvas em $APP_DIR/installation-info.txt):${NC}"
 echo -e "   🗄️  Senha do banco: ${YELLOW}$DB_PASSWORD${NC}"
-echo -e "   🔑 Session Secret: ${YELLOW}$SESSION_SECRET${NC}"
-echo -e "   🔑 JWT Secret: ${YELLOW}$JWT_SECRET${NC}"
-echo -e "   🔑 Encryption Key: ${YELLOW}$ENCRYPTION_KEY${NC}"
-
-echo -e "\n${CYAN}📝 Arquivos Importantes:${NC}"
-echo -e "   ⚙️  Configuração: ${BLUE}$APP_DIR/backend/.env${NC}"
-echo -e "   📋 Logs da aplicação: ${BLUE}$APP_DIR/logs/app.log${NC}"
-echo -e "   📋 Logs do PM2: ${BLUE}pm2 logs codeseek${NC}"
-echo -e "   🌐 Configuração Nginx: ${BLUE}/etc/nginx/sites-available/codeseek${NC}"
-
 echo -e "\n${CYAN}🛠️  Comandos Úteis:${NC}"
-echo -e "   Status dos serviços: ${BLUE}pm2 status codeseek && sudo systemctl status nginx postgresql redis-server${NC}"
+echo -e "   Status da aplicação: ${BLUE}pm2 status codeseek${NC}"
 echo -e "   Logs em tempo real: ${BLUE}pm2 logs codeseek${NC}"
 echo -e "   Reiniciar aplicação: ${BLUE}sudo -u codeseek pm2 restart codeseek${NC}"
-echo -e "   Verificar configuração: ${BLUE}sudo bash $APP_DIR/post-install-check.sh${NC}"
-echo -e "   Troubleshooting: ${BLUE}sudo bash $APP_DIR/troubleshoot.sh${NC}"
-
 echo -e "\n${CYAN}🔧 Próximos Passos:${NC}"
-echo -e "   1. Acesse ${BLUE}https://$DOMAIN${NC} para verificar se tudo está funcionando"
-echo -e "   2. Configure as variáveis de email e pagamento em ${BLUE}$APP_DIR/backend/.env${NC}"
-echo -e "   3. Personalize a aplicação conforme suas necessidades"
-echo -e "   4. Configure backups regulares do banco de dados"
-echo -e "   5. Monitore os logs regularmente"
-
+echo -e "   1. Acesse ${BLUE}https://$DOMAIN${NC} para verificar se tudo está funcionando."
+echo -e "   2. Configure as variáveis de email e pagamento em ${BLUE}$APP_DIR/backend/.env${NC} e reinicie com ${BLUE}pm2 restart codeseek${NC}."
 echo -e "\n${GREEN}🎉 Instalação concluída! Sua aplicação CodeSeek está pronta para uso.${NC}\n"
 
-# Salvar informações da instalação
 cat > "$APP_DIR/installation-info.txt" << EOF
 CodeSeek V1 - Informações da Instalação
 ========================================
-
-Data da instalação: $(date)
+Data: $(date)
 Domínio: $DOMAIN
 Email SSL: $SSL_EMAIL
 Banco de dados: $DB_NAME
 Usuário do banco: $DB_USER
 Senha do banco: $DB_PASSWORD
-
-Diretório da aplicação: $APP_DIR
-Usuário da aplicação: codeseek
-
-Arquivos importantes:
-- Configuração: $APP_DIR/backend/.env
-- Logs: $APP_DIR/logs/app.log
-  - Configuração Nginx: /etc/nginx/sites-available/codeseek
-  - PM2 process: pm2 status codeseek
-
-Comandos úteis:
-  - Status: pm2 status codeseek
-  - Logs: pm2 logs codeseek
-  - Reiniciar: sudo -u codeseek pm2 restart codeseek
-- Verificação: sudo bash $APP_DIR/post-install-check.sh
-- Troubleshooting: sudo bash $APP_DIR/troubleshoot.sh
+Diretório: $APP_DIR
 EOF
 
 chown codeseek:codeseek "$APP_DIR/installation-info.txt"
