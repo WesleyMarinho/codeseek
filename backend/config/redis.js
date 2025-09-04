@@ -10,7 +10,7 @@ const redisClient = redis.createClient({
     port: process.env.REDIS_PORT || 6379
   },
   // A biblioteca lida com senhas vazias ou nulas automaticamente
-  password: process.env.REDIS_PASSWORD
+  password: process.env.REDIS_PASSWORD || null
 });
 
 redisClient.on('connect', () => logger.info('Connecting to Redis...'));
