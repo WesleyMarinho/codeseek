@@ -5,7 +5,7 @@
 ### OPÇÃO 1: Instalação Direta com Argumentos
 ```bash
 # Com domínio personalizado e SSL automático
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh)" -- meudominio.com admin@meudominio.com
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh)" -- exemplo.com admin@exemplo.com
 
 # Ou apenas com IP (sem domínio personalizado)
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh)" -- localhost
@@ -28,7 +28,7 @@ git clone https://github.com/WesleyMarinho/codeseek.git
 cd codeseek
 
 # Execute o script de instalação
-sudo bash install-vps.sh meudominio.com admin@meudominio.com
+sudo bash install-vps.sh exemplo.com admin@exemplo.com
 ```
 
 ⚠️ **IMPORTANTE:** A instalação via `curl | bash` não suporta entrada interativa. Use sempre os métodos acima.
