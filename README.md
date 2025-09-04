@@ -75,11 +75,25 @@ CodeSeek/
 ### 🎯 Instalação em VPS Ubuntu (Recomendado)
 
 ```bash
-# Instalação automatizada em uma linha
+# 1. Clone o repositório
 git clone https://github.com/WesleyMarinho/codeseek.git
 cd codeseek
+
+# 2a. Instalação com domínio e SSL automático
+sudo bash install-vps.sh meudominio.com admin@meudominio.com
+
+# 2b. Instalação simples (apenas IP)
 sudo bash install-vps.sh
+
+# 2c. Instalação interativa
+sudo bash install-vps.sh
+# O script irá perguntar sobre domínio e SSL
 ```
+
+### 🔑 **Login Administrativo**
+- **Email**: `admin@codeseek.com`
+- **Senha**: `admin123456`
+- **⚠️ ALTERE A SENHA após o primeiro login!**
 
 ### 🔧 Instalação Manual
 
