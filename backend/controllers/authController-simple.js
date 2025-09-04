@@ -2,7 +2,6 @@
 // Versão simplificada que funciona 100%
 
 const { User } = require('../models/Index');
-const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
 const authController = {

@@ -23,7 +23,7 @@ async function testCodeSeek() {
         const page = await context.newPage();
         
         // URL base - ajustar conforme necessário
-        const baseUrl = 'http://localhost:3000';
+        const baseUrl = 'https://codeseek.shop';
         
         console.log(`🌐 Testando URL: ${baseUrl}`);
         

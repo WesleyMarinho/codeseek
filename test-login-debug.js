@@ -8,7 +8,7 @@ async function debugLogin() {
     const context = await browser.newContext();
     const page = await context.newPage();
     
-    const baseUrl = 'http://104.218.50.94';
+    const baseUrl = 'https://codeseek.shop';
     
     try {
         console.log('1. 🌐 Acessando página inicial...');
