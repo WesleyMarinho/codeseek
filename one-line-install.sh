@@ -106,7 +106,7 @@ info "Salvando a lista de processos do PM2..."
 sudo -u codeseek pm2 save
 # Gera e executa o script de inicialização do sistema de forma limpa
 info "Configurando o serviço de boot do PM2..."
-pm2 startup systemd -u codeseek --hp /home/codeseek | sudo -E bash -
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u codeseek --hp /opt/codeseek
 log "PM2 configurado para gerenciar a aplicação."
 
 # --- 7. CONFIGURAÇÃO DO NGINX, FIREWALL E SSL ---
