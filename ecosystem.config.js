@@ -4,32 +4,46 @@ module.exports = {
       name: 'codeseek',
       script: './backend/server.js',
       
-      // --- Melhoria de Performance ---
-      // Define um número fixo de instâncias. '2' é um valor seguro e eficiente
-      // para a maioria dos servidores VPS, garantindo alta disponibilidade sem sobrecarregar o sistema.
-      instances: 2,
-      exec_mode: 'cluster',
+      // Configuração otimizada para VPS
+      instances: 1, // Uma instância é suficiente para VPS pequenos/médios
+      exec_mode: 'fork', // Fork mode é mais eficiente para aplicações single-core
       
-      // --- Gerenciamento de Memória ---
-      // Reinicia a aplicação se ela exceder 250MB de RAM.
-      // Previne vazamentos de memória de derrubarem o servidor.
-      max_memory_restart: '2048M',
+      // Configuração de memória adequada para VPS
+      max_memory_restart: '512M', // Limite adequado para VPS típicos
       
-      // --- Gerenciamento de Logs (Robusto) ---
-      // Caminhos explícitos para os logs, que já criamos no script.
-      output: '/var/log/codeseek/out.log',
-      error: '/var/log/codeseek/error.log',
+      // Configuração de logs simplificada
+      log_file: '/var/log/codeseek/combined.log',
+      error_file: '/var/log/codeseek/error.log',
+      out_file: '/var/log/codeseek/out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
       
-      // --- Rotação de Logs ---
-      // Impede que os arquivos de log cresçam indefinidamente.
-      log_file_size: '10M', // Rotaciona os logs a cada 10MB
+      // Configuração de restart automático
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      min_uptime: '10s',
       
-      // --- Variáveis de Ambiente Específicas ---
-      // Garante que a aplicação sempre rode em modo de produção quando iniciada pelo PM2.
+      // Variáveis de ambiente
       env: {
         NODE_ENV: 'production',
+        PORT: 3000
       },
-    },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3000
+      }
+    }
   ],
+  
+  // Configuração de deploy (opcional)
+  deploy: {
+    production: {
+      user: 'root',
+      ref: 'origin/main',
+      repo: 'https://github.com/WesleyMarinho/codeseek.git',
+      path: '/opt/codeseek',
+      'post-deploy': 'cd backend && npm install --production && pm2 reload ecosystem.config.js --env production'
+    }
+  }
 };

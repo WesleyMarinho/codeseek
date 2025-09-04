@@ -70,69 +70,127 @@ CodeSeek/
 └── Dockerfile             # Docker build instructions
 ```
 
-## 🚀 Quick Start
+## 🚀 Instalação Rápida
 
-### 🎯 Production Installation
-
-```bash
-# One-line automated installation
-curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/one-line-install.sh | sudo bash -s -- yourdomain.com admin@yourdomain.com
-```
-
-### 🔧 Development Setup
+### 🎯 Instalação em VPS Ubuntu (Recomendado)
 
 ```bash
-# Clone and install
+# Instalação automatizada em uma linha
 git clone https://github.com/WesleyMarinho/codeseek.git
 cd codeseek
-sudo bash install.sh
+sudo bash install-vps.sh
 ```
 
-**For detailed installation instructions, see [README-INSTALL.md](README-INSTALL.md)**
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+
-- Redis 6+
-- Ubuntu/Debian Linux (for automated installation)
-
-## 🔧 Configuration
-
-Key environment variables (see `.env.example`):
+### 🔧 Instalação Manual
 
 ```bash
-# Database
+# 1. Clone o repositório
+git clone https://github.com/WesleyMarinho/codeseek.git
+cd codeseek
+
+# 2. Configure as variáveis de ambiente
+cp backend/.env.example backend/.env
+# Edite backend/.env com suas configurações
+
+# 3. Instale as dependências
+cd backend && npm install
+cd ../frontend && npm install && npm run build
+
+# 4. Configure o banco de dados PostgreSQL
+sudo -u postgres createuser codeseek_user
+sudo -u postgres createdb codeseek_db -O codeseek_user
+
+# 5. Inicie a aplicação
+pm2 start ecosystem.config.js --env production
+```
+
+### 📋 Pré-requisitos
+- **SO**: Ubuntu 20.04+ (recomendado)
+- **Node.js**: 18.x ou superior
+- **PostgreSQL**: 14+ 
+- **Redis**: 6+
+- **PM2**: Para gerenciamento de processos
+- **Nginx**: Para proxy reverso
+
+### ⚡ Instalação Ultra-Rápida
+```bash
+# Comando único para instalação completa
+curl -fsSL https://raw.githubusercontent.com/WesleyMarinho/codeseek/main/install-vps.sh | sudo bash
+```
+
+## 🔧 Configuração
+
+### Variáveis de Ambiente Principais
+
+Edite o arquivo `backend/.env` (baseado em `.env.example`):
+
+```bash
+# Banco de Dados
 DB_HOST=localhost
-DB_NAME=codeseek
-DB_USER=codeseek
-DB_PASSWORD=your_secure_password
+DB_NAME=codeseek_db
+DB_USER=codeseek_user
+DB_PASSWORD=sua_senha_muito_forte
 
-# Application
-APP_SECRET=your_app_secret_key
-DOMAIN=yourdomain.com
-ADMIN_EMAIL=admin@yourdomain.com
+# Aplicação
+BASE_URL=http://seu-dominio.com
+DOMAIN=seu-dominio.com
+ADMIN_EMAIL=admin@seu-dominio.com
+SESSION_SECRET=chave_secreta_de_32_caracteres
 
-# Optional: Payment Integration
-CHARGEBEE_SITE=your_site
-CHARGEBEE_API_KEY=your_api_key
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Opcionais
+CHARGEBEE_SITE=seu_site_chargebee
+CHARGEBEE_API_KEY=sua_api_key
 ```
 
-## 🚨 Troubleshooting
+### 🌐 Configuração de Domínio
 
-For issues and diagnostics:
+1. **Edite o Nginx**: `/etc/nginx/sites-available/codeseek`
+2. **Substitua**: `server_name localhost;` por `server_name seu-dominio.com;`
+3. **Recarregue**: `sudo systemctl reload nginx`
+
+### 🔒 SSL/HTTPS (Opcional)
 
 ```bash
-# Run comprehensive diagnostics
-bash troubleshoot.sh
+# Instalar Certbot
+sudo apt install certbot python3-certbot-nginx
 
-# Check installation
-bash post-install-check.sh
+# Obter certificado SSL
+sudo certbot --nginx -d seu-dominio.com
 
-# View service logs
-sudo journalctl -u codeseek -f
+# Renovação automática
+sudo crontab -e
+# Adicione: 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 
-**For detailed troubleshooting, see [README-INSTALL.md](README-INSTALL.md)**
+## 🚨 Solução de Problemas
+
+### Comandos de Diagnóstico
+
+```bash
+# Status da aplicação
+sudo -u codeseek pm2 status
+
+# Ver logs da aplicação
+sudo -u codeseek pm2 logs codeseek
+
+# Ver logs do sistema
+sudo journalctl -u nginx -f
+
+# Reiniciar serviços
+sudo -u codeseek pm2 restart codeseek
+sudo systemctl restart nginx postgresql redis
+```
+
+### Problemas Comuns
+
+1. **Erro de conexão com banco**: Verifique credenciais em `.env`
+2. **Porta 3000 ocupada**: `sudo lsof -i :3000` e mate o processo
+3. **Nginx erro 502**: Verifique se a aplicação está rodando com `pm2 status`
+4. **Permissões**: `sudo chown -R codeseek:codeseek /opt/codeseek`
 
 ## 🐳 Docker Setup
 

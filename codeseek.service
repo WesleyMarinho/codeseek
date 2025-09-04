@@ -1,18 +1,42 @@
 [Unit]
-Description=CodeSeek Application
+Description=CodeSeek V1 - Digital Marketplace Platform
+Documentation=https://github.com/WesleyMarinho/codeseek
 After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
 
 [Service]
-Type=simple
+Type=forking
 User=codeseek
-WorkingDirectory=/opt/codeseek/backend
-ExecStart=/usr/bin/node server.js
-Restart=on-failure
-RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=codeseek
+Group=codeseek
+WorkingDirectory=/opt/codeseek
 Environment=NODE_ENV=production
+Environment=PATH=/usr/bin:/usr/local/bin:/usr/lib/node_modules/.bin
+ExecStart=/usr/lib/node_modules/pm2/bin/pm2 start ecosystem.config.js --env production
+ExecReload=/usr/lib/node_modules/pm2/bin/pm2 reload ecosystem.config.js --env production
+ExecStop=/usr/lib/node_modules/pm2/bin/pm2 stop all
+Restart=always
+RestartSec=10s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+KillMode=mixed
+PIDFile=/home/codeseek/.pm2/pm2.pid
+
+# Configurações de logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=codeseek
+
+# Configurações de segurança
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/codeseek /var/log/codeseek /home/codeseek/.pm2
+
+# Limites de recursos
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryLimit=1G
 
 [Install]
 WantedBy=multi-user.target
