@@ -1,5 +1,6 @@
-// --- Core Dependencies ---
 require('dotenv').config();
+
+// --- Core Dependencies ---
 const path = require('path');
 
 // --- Third-Party Libraries ---
